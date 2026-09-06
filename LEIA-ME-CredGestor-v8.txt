@@ -1,0 +1,16 @@
+CrediGestor v8
+
+Novidades desta atualização:
+1. Corrigido o bug em que o cursor/foco saía do campo de busca com lupa ao digitar.
+   A busca de Clientes e Empréstimos agora filtra a lista sem recriar o campo a cada tecla.
+2. A aba Clientes ganhou o botão "Editar cliente" diretamente em cada cartão.
+3. Após criar um novo contrato, o WhatsApp do cliente é aberto automaticamente com o comprovante/resumo preenchido.
+   O usuário ainda toca em "Enviar" dentro do WhatsApp.
+4. O botão manual de reenviar comprovante continua disponível.
+
+Arquivos da atualização para GitHub:
+- index.html (substituir)
+- sw.js (substituir)
+- features-v8.js (adicionar)
+
+Todos os demais arquivos da v7 permanecem no repositório.
