@@ -1,0 +1,24 @@
+CrediGestor v6 — atualização
+
+Arquivos para enviar ao MESMO repositório do GitHub:
+1. index.html (substituir o existente)
+2. sw.js (substituir o existente)
+3. features-v6.js (arquivo novo)
+
+Não apague os arquivos anteriores: app.js, enhancements.js, enhancements.css, backup-csv.js, features-v5.js, styles.css, manifest.webmanifest e os ícones continuam sendo usados.
+
+NOVO NESTA VERSÃO
+- Exclusão protegida de clientes e empréstimos, com confirmação.
+- Mix personalizado de 4 cores em Ajustes > Personalização.
+- Gráfico de recebimentos dos últimos 6 meses.
+- Gráfico de saídas (capital liberado em empréstimos e acréscimos) dos últimos 6 meses.
+- Ranking “Maiores pagadores” com o valor total registrado.
+- Botão “WhatsApp + PIX” nas cobranças em aberto.
+- Configuração editável da chave PIX, tipo, favorecido e mensagem do WhatsApp.
+- Padrão inicial: CNPJ 48379018000172 / RJOTA.
+
+IMPORTANTE SOBRE WHATSAPP
+O botão abre a conversa do cliente com a mensagem pronta. O envio final continua sendo confirmado no WhatsApp. Disparo automático sem toque exigiria integração com a API oficial do WhatsApp Business e um servidor seguro.
+
+DADOS
+A atualização mantém o mesmo armazenamento local do CrediGestor. Substituir os arquivos do site não apaga os clientes e empréstimos já salvos no navegador.
