@@ -1,0 +1,16 @@
+CrediGestor v11 — atualização Web + Mobile
+
+Principais alterações:
+- Configurações acessíveis diretamente pelo ícone de engrenagem.
+- Modo Mobile, Web e Automático mantidos nas configurações.
+- No modo Web/Automático em telas grandes, a barra de navegação fica na lateral direita.
+- No Mobile, a navegação permanece na parte inferior para preservar espaço de leitura.
+- Aba Empréstimos: nome do cliente em maior destaque e negrito; nome do contrato menor e sem negrito.
+- Modelos de gráficos: Colunas, Barras horizontais, Linha, Área, Pontos, Rosca e Pizza.
+- Períodos dos gráficos: 3, 6 e 12 meses.
+- Login por Conta Google usando o mesmo ID OAuth da integração com Google Drive.
+- Opção de exigir login ao abrir.
+- Atalho de conta no topo e opção de sair.
+
+Observação sobre login:
+O login Google identifica o acesso ao aplicativo, mas os dados continuam armazenados localmente no navegador. Para sincronizar automaticamente os mesmos dados entre celular e computador, será necessária uma etapa posterior com banco de dados em nuvem.
