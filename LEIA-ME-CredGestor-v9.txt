@@ -1,0 +1,14 @@
+CrediGestor v9 — valor dos juros no comprovante do WhatsApp
+
+Alteração desta versão:
+- No Resumo do Empréstimo enviado pelo WhatsApp, foi incluído "Valor dos Juros" entre "Valor Emprestado" e "Valor Total".
+- O valor dos juros é calculado automaticamente pela diferença entre o Valor Total e o Valor Emprestado.
+- Exemplo: R$ 27.360,00 emprestados e R$ 32.832,00 total = R$ 5.472,00 de juros.
+
+Para atualizar no GitHub:
+1. Substitua index.html.
+2. Substitua sw.js.
+3. Substitua features-v7.js.
+4. Aguarde o GitHub Pages atualizar e recarregue a página.
+
+As funções da v8 permanecem ativas.

@@ -1,4 +1,4 @@
-const CACHE='credigestor-v8';
+const CACHE='credigestor-v9';
 const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./features-v8.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([

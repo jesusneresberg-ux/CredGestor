@@ -81,9 +81,12 @@
   }
   function loanReceiptTextV7(cl,k){
     const m=receiptMetaV7(k);
+    const principal=Number(k.initialPrincipal)||0;
+    const interestValue=Math.max(0,m.total-principal);
     return `🏦 *Resumo do Empréstimo - ${m.code}*\n\n`+
       `👤 Cliente: ${cl.name||'Cliente'}\n`+
-      `💰 Valor Emprestado: ${brl(k.initialPrincipal)}\n`+
+      `💰 Valor Emprestado: ${brl(principal)}\n`+
+      `💸 Valor dos Juros: ${brl(interestValue)}\n`+
       `💵 Valor Total: ${brl(m.total)}\n`+
       `📊 Taxa de Juros: ${rateLabelV7(k.interestRate)}%\n`+
       `📅 Data do Início: ${formatDateV7(k.startDate)}\n`+
