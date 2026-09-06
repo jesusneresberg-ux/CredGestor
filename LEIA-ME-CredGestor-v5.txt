@@ -1,0 +1,43 @@
+CrediGestor v5
+
+Envie estes arquivos para a raiz do repositório CredGestor no GitHub:
+- index.html (substituir)
+- sw.js (substituir)
+- features-v5.js (novo)
+
+O arquivo backup-csv.js atual pode permanecer como está.
+
+Novidades:
+1. Aba Clientes:
+   - botão + Empréstimo no topo;
+   - botão + Adicionar empréstimo em cada cliente;
+   - lupa para localizar pessoas por nome, CPF, telefone ou endereço.
+
+2. Busca de pessoas:
+   - lupa nos campos de nome/cliente;
+   - seleção rápida do cliente antes de criar empréstimo.
+
+3. Google Drive:
+   - opção Cadastrar integração;
+   - conexão pela tela oficial do Google (OAuth);
+   - backup JSON direto no Drive;
+   - CSV completo direto no Drive;
+   - pasta "CrediGestor Backups".
+
+   Para a integração direta funcionar, é necessário criar uma credencial OAuth
+   do tipo Aplicativo da Web no Google Cloud, ativar a Google Drive API e
+   cadastrar a origem JavaScript exibida pelo próprio CrediGestor.
+   O app não solicita nem armazena a senha da Conta Google.
+
+4. Importação CSV:
+   - correção de valores brasileiros como 1.100 = 1100;
+   - leitura de CSV separado por vírgula, ponto e vírgula ou TAB;
+   - detecção UTF-8 e Windows-1252;
+   - compatibilidade com o formato "DIA 01 • Nome";
+   - suporte a CSVs separados de contratos e lançamentos;
+   - reconhecimento de sinônimos de colunas;
+   - vínculo de lançamentos ao contrato pelo ID;
+   - importação de aumentos, amortizações e pagamentos;
+   - proteção contra duplicação ao importar novamente.
+
+Depois do upload, aguarde o GitHub Pages atualizar e recarregue o aplicativo.
