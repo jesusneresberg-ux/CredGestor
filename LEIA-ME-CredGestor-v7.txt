@@ -1,0 +1,29 @@
+CREDIGESTOR v7 — COMPROVANTE VIA WHATSAPP
+
+Atualização adicionada:
+- Botão “Enviar comprovante” nos empréstimos.
+- Abre o WhatsApp diretamente no telefone cadastrado do cliente.
+- Resumo no formato:
+  🏦 Resumo do Empréstimo - EMP-XXXX
+  👤 Cliente
+  💰 Valor emprestado
+  💵 Valor total
+  📊 Taxa de juros
+  📅 Data do início
+  📅 Data do término
+  📦 Modalidade
+  🔢 Parcelas e valor de cada parcela
+- Código EMP automático e editável.
+- Campos de modalidade, parcelas, valor total e término editáveis no cadastro/edição do empréstimo.
+- Valor total e término podem ser recalculados automaticamente.
+- O CSV completo passa a preservar os novos campos do comprovante.
+- Mantém todas as funções da v6: exclusões, mix de 4 cores, gráficos, maiores pagadores, PIX/WhatsApp e Drive.
+
+ATUALIZAÇÃO NO GITHUB
+Substitua:
+1. index.html
+2. sw.js
+Adicione:
+3. features-v7.js
+
+Não apague os demais arquivos do repositório.

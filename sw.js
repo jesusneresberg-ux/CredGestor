@@ -1,5 +1,5 @@
-const CACHE='credigestor-v6';
-const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE='credigestor-v7';
+const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([
   self.clients.claim(),
