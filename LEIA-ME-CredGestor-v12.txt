@@ -1,0 +1,30 @@
+CREDIGESTOR V12 — OAUTH GOOGLE + SINCRONIZAÇÃO ENTRE DISPOSITIVOS
+
+O que mudou
+- Login Google e sincronização passam a usar a mesma autorização OAuth.
+- O app solicita: perfil básico + Google Drive (drive.file).
+- Os dados sincronizados ficam em: Google Drive / CrediGestor Sync / credigestor-sync.json.
+- Sincronização automática após alterações, ao voltar para o app e quando a internet retornar.
+- Botões manuais: Sincronizar agora, Baixar da nuvem e Enviar este aparelho.
+- Primeira sincronização com dados dos dois lados pergunta qual cópia deve prevalecer.
+- Preferência Mobile/Web e o ID OAuth permanecem locais por dispositivo para evitar que o celular force o layout do computador.
+
+CONFIGURAÇÃO NO GOOGLE CLOUD
+1. Abra console.cloud.google.com.
+2. Crie ou selecione um projeto.
+3. Ative a Google Drive API.
+4. Configure a tela de consentimento OAuth.
+5. Crie uma credencial OAuth 2.0 do tipo "Aplicativo da Web".
+6. Em "Origens JavaScript autorizadas", adicione a ORIGEM do seu GitHub Pages, por exemplo:
+   https://SEU-USUARIO.github.io
+   Não inclua a parte /nome-do-repositorio na origem.
+7. Se o app OAuth estiver em modo Teste, adicione sua Conta Google em "Usuários de teste".
+8. Copie o ID terminado em .apps.googleusercontent.com.
+9. No CrediGestor: Configurações > Conta e acesso > Configurar OAuth.
+10. Entre com Google e depois, em Sincronização, toque "Sincronizar agora".
+
+IMPORTANTE
+- Não coloque Client Secret no código do site. Aplicativo web no navegador usa apenas o Client ID.
+- O token OAuth fica temporário na sessão e expira; o Google pode solicitar nova autorização.
+- O app continua funcionando offline com os dados locais e sincroniza quando a conexão/autorização estiver disponível.
+- Antes da primeira sincronização em aparelhos com bases diferentes, faça também um backup JSON por segurança.

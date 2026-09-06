@@ -1,0 +1,11 @@
+CrediGestor v10 — versão Web e gráficos aprimorados
+
+Novidades:
+- Formato de exibição selecionável: Automático, Compacto/celular e Amplo/web.
+- Gráficos aprimorados com 5 modelos: Barras, Linha, Área, Pontos e Rosca.
+- 6 paletas de cores: Oceano, Esmeralda, Pôr do sol, Violeta, Vibrante e Grafite.
+- Período dos gráficos selecionável: 6 ou 12 meses.
+- Resumo de recebimentos, saídas, diferença e maior movimento.
+- Ranking de maiores pagadores preservado e refinado.
+- Na aba Empréstimos, o nome do cliente aparece maior e em negrito; o nome do contrato fica menor e sem negrito.
+- Mantidas as funções anteriores: WhatsApp, PIX, comprovante, CSV, Drive, exclusões e temas.
