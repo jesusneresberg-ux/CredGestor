@@ -1,0 +1,16 @@
+CrediGestor v3.1 - Backup Drive + CSV
+
+Arquivos a enviar para a raiz do repositório CredGestor:
+1. index.html       (substituir o atual)
+2. sw.js            (substituir o atual)
+3. backup-csv.js    (arquivo novo ou substituir a versão anterior)
+
+Novidades desta revisão:
+- removida a opção "Controle anterior" do menu
+- o CSV passa a ser a única ponte de migração do aplicativo anterior
+- backup JSON no aparelho
+- salvar backup no Google Drive pelo compartilhamento do Android
+- exportar CSV completo
+- importar backup JSON
+- importar CSV completo do CrediGestor
+- importar o CSV antigo diretamente para Clientes/Empréstimos; lembretes identificáveis vão para o CRM
