@@ -1,0 +1,24 @@
+/* CrediGestor v2 — Clientes + Empréstimos */
+.bottom-nav-v2{grid-template-columns:repeat(4,1fr)}
+.compact-title{margin-top:16px;margin-bottom:4px}
+.client-address{margin-top:9px;line-height:1.45}
+.client-extra{margin-top:8px;display:grid;gap:5px}
+.loan-search{margin:14px 0 10px}
+.loan-numbers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.loan-numbers>div{padding:10px;border-radius:14px;background:#f8fafc;border:1px solid var(--line)}
+.loan-numbers span{display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.loan-numbers strong{display:block;margin-top:4px;font-size:16px}
+.loan-meta{margin-top:10px;line-height:1.45}
+.loan-main-row{min-width:0}
+.loan-main-row>div:last-child{min-width:0}
+.loan-main-row .title,.loan-main-row .muted{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick-menu2{display:grid;gap:10px}
+.quick-card2{width:100%;border:1px solid var(--line);background:#f8fafc;border-radius:18px;padding:14px;display:flex;align-items:center;gap:12px;text-align:left;color:var(--text)}
+.quick-card2>span{font-size:22px;width:36px;text-align:center}
+.quick-card2 b{display:block;font-size:14px}
+.quick-card2 small{display:block;color:var(--muted);margin-top:3px;line-height:1.35}
+.history-row2{padding:11px 0;border-bottom:1px solid var(--line)}
+.history-row2:last-child{border-bottom:0}
+.summary-strip2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.summary-strip2 .card{padding:12px}
+@media (max-width:360px){.loan-numbers,.summary-strip2{grid-template-columns:1fr}.bottom-nav .nav-btn small{font-size:9px}}

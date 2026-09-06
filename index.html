@@ -7,6 +7,7 @@
   <title>CrediGestor Mobile</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="enhancements.css?v=2" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -20,12 +21,11 @@
 
     <main id="view" class="view"></main>
 
-    <nav class="bottom-nav" aria-label="Navegação principal">
-      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><small>Início</small></button>
+    <nav class="bottom-nav bottom-nav-v2" aria-label="Navegação principal">
+      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><small>Dashboard</small></button>
       <button data-view="clients" class="nav-btn"><span>👥</span><small>Clientes</small></button>
-      <button data-view="charges" class="nav-btn"><span>✓</span><small>Cobranças</small></button>
-      <button data-view="crm" class="nav-btn"><span>☷</span><small>CRM</small></button>
-      <button data-view="settings" class="nav-btn"><span>⚙</span><small>Ajustes</small></button>
+      <button data-view="loans" class="nav-btn"><span>💰</span><small>Empréstimos</small></button>
+      <button data-view="more" id="moreBtn" class="nav-btn"><span>•••</span><small>Mais</small></button>
     </nav>
   </div>
 
@@ -37,6 +37,7 @@
   </dialog>
 
   <input id="importInput" type="file" accept="application/json" hidden />
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
+  <script src="enhancements.js?v=2"></script>
 </body>
 </html>
