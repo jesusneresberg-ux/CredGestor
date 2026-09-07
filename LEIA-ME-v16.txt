@@ -1,0 +1,25 @@
+CrediGestor v16 — atualização
+
+Arquivos para substituir/adicionar no repositório:
+1. Adicionar features-v16.js na raiz.
+2. Substituir index.html pelo index.html deste pacote.
+3. Substituir sw.js pelo sw.js deste pacote.
+4. Manter features-v15.js e todos os arquivos anteriores.
+
+Esta atualização mantém a mesma chave de dados do CrediGestor e não apaga os dados locais existentes.
+
+Novo na v16:
+- login/desbloqueio por biometria/passkey do próprio aparelho (impressão digital, rosto ou desbloqueio seguro, conforme Android/navegador);
+- login Google permanece como alternativa e para autorizar a sincronização na nuvem;
+- biometria é cadastrada por aparelho e não armazena impressão digital/rosto no CrediGestor;
+- campo “Foto da garantia / bem penhorado” ao criar ou editar empréstimo;
+- botão abre a câmera traseira do celular quando o navegador oferece suporte;
+- compactação automática da foto para reduzir o tamanho do backup e da sincronização;
+- miniatura da garantia exibida no cartão do empréstimo;
+- opção de vincular o empréstimo a uma garantia já cadastrada para o cliente;
+- foto também pode ser adicionada/editada no cadastro de Garantias do cliente.
+
+Observações:
+- WebAuthn/biometria exige HTTPS (GitHub Pages já usa HTTPS) e navegador compatível.
+- A biometria funciona como desbloqueio local do CrediGestor. A autorização do Google Drive continua usando OAuth Google.
+- Fotos entram no estado JSON e, portanto, participam do backup/sincronização JSON. Exportação CSV não incorpora arquivos de imagem.
