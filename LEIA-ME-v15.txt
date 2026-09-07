@@ -1,0 +1,23 @@
+CrediGestor v15 — atualização
+
+Arquivos para substituir/adicionar no repositório:
+1. Adicionar features-v15.js na raiz.
+2. Substituir index.html pelo index.html deste pacote.
+3. Substituir sw.js pelo sw.js deste pacote.
+
+Esta atualização mantém a mesma chave de dados do CrediGestor e não apaga os dados locais existentes.
+
+Mantido da v14:
+- lupa de pesquisa na aba Cobranças;
+- quadro das cobranças do dia atual;
+- próximas cobranças em ordem de data;
+- atrasados em quadro recolhível/expansível;
+- Clientes e Empréstimos em ordem alfabética;
+- letras/avatares com cores distintas;
+- comprovantes com emojis;
+- pagamento registra como Pago antes de abrir o WhatsApp;
+- forma de pagamento no comprovante;
+- botão de resumo na aba Cobranças.
+
+Novo na v15:
+- linha “💸 Juros” em reais entre “Valor Emprestado” e “Valor Total” em resumos e comprovantes.
