@@ -1,0 +1,14 @@
+CrediGestor v13 — pagamento + comprovante automático
+
+Alterações desta versão:
+1. O dia-base do vencimento passa a seguir automaticamente o dia da data de início do empréstimo.
+   Exemplo: empréstimo iniciado em 09/06/2026 => dia-base 9.
+2. Na aba Empréstimos foi adicionado o botão “Pagar”.
+3. Na aba Cobranças o botão “Marcar pago” passa a aparecer como “Pagar”.
+4. Ao confirmar um pagamento, o aplicativo salva o pagamento e abre o WhatsApp do cliente com o comprovante já preenchido.
+5. O comprovante mantém o formato do Resumo do Empréstimo e inclui “Valor dos Juros” entre “Valor Emprestado” e “Valor Total”.
+6. O comprovante de pagamento também mostra valor pago, data do pagamento e referência.
+7. Cache atualizado para v13 para evitar que o navegador continue mostrando a versão antiga.
+
+Observação sobre WhatsApp:
+Em um site comum/GitHub Pages, o navegador pode abrir o WhatsApp com a mensagem pronta, mas o envio final ainda precisa ser confirmado pelo usuário. Envio 100% automático exige integração com a API oficial do WhatsApp Business.
