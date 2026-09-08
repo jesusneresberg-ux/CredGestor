@@ -1,0 +1,8 @@
+CrediGestor v19
+
+Correção de comprovantes após amortização:
+- comprovante de pagamento usa o saldo atual já amortizado;
+- comprovante de amortização mostra saldo anterior, valor amortizado e novo saldo;
+- amortizações novas gravam balanceBefore/balanceAfter;
+- amortizações antigas recebem esses metadados automaticamente ao carregar;
+- cache do PWA atualizado para v19.
