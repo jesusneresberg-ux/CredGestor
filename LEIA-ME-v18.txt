@@ -1,0 +1,12 @@
+CrediGestor v18
+
+Atualizações:
+- Amortização reduz o saldo do contrato imediatamente.
+- Próximos juros passam a ser calculados sobre o novo saldo, quando a modalidade for juros sobre saldo.
+- Tela de amortização mostra a prévia do novo saldo antes de confirmar.
+- Bloqueio de amortização maior que o saldo atual.
+- Comprovante resumido de amortização via WhatsApp.
+- Comprovante de pagamento resumido via WhatsApp.
+- Saldo auxiliar currentPrincipal sincronizado para integrações e relatórios futuros.
+
+Para atualizar no GitHub Pages, substitua os arquivos da versão anterior pelos desta pasta.
