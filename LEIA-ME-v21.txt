@@ -1,0 +1,19 @@
+CrediGestor v21
+
+Novidades principais:
+- Botão único “Pagamentos” com três escolhas: Pagar Parcela, Amortizar Capital e Quitar Capital + Juros.
+- Quitação mostra capital, juros, total e saldo final antes da confirmação.
+- Quitação total zera o capital, encerra o contrato e bloqueia cobranças/notificações futuras.
+- Amortização recalcula imediatamente o saldo e os juros futuros.
+- Dashboard financeiro avançado com capital ativo, juros previstos/recebidos, recebimentos e quitações.
+- Histórico completo por cliente, reunindo pagamentos, amortizações, acréscimos e encerramentos.
+- Central de cobranças com Hoje, Atrasados (recolhível) e Próximos vencimentos.
+- Mantém a estrutura de dados/localStorage das versões anteriores.
+
+Atualização GitHub Pages:
+1. Faça backup dos dados pelo próprio CrediGestor.
+2. Substitua index.html e sw.js.
+3. Adicione features-v21.js.
+4. Mantenha todos os arquivos anteriores, inclusive features-v20.js.
+5. Faça commit e aguarde o GitHub Pages publicar.
+6. No celular, feche/reabra o app para carregar o novo cache v21.
