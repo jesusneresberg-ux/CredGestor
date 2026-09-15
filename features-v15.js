@@ -72,7 +72,6 @@
       code:k.loanCode||'EMPRÉSTIMO',
       principal,total,installments,
       installmentValue:installments?total/installments:total,
-      end:k.endDate||addMonthsV14(k.startDate,installments),
       modality:k.modality||'Padrão'
     };
   }
@@ -87,7 +86,6 @@
       `💵 Valor Total: ${brl(m.total)}\n`+
       `📊 Taxa de Juros: ${rateLabelV14(k.interestRate)}%\n`+
       `📅 Data do Início: ${formatDateV14(k.startDate)}\n`+
-      `📅 Data do Término: ${formatDateV14(m.end)}\n`+
       `📦 Modalidade: ${m.modality}\n`+
       `🔢 Parcelas: ${m.installments}x de ${brl(m.installmentValue)}`;
   }
@@ -100,7 +98,6 @@
       `💵 Valor Total: ${brl(m.total)}\n`+
       `📊 Taxa de Juros: ${rateLabelV14(k.interestRate)}%\n`+
       `📅 Data do Início: ${formatDateV14(k.startDate)}\n`+
-      `📅 Data do Término: ${formatDateV14(m.end)}\n`+
       `📦 Modalidade: ${m.modality}\n`+
       `🔢 Parcelas: ${m.installments}x de ${brl(m.installmentValue)}\n`+
       `✅ Valor Pago: ${brl(payment.amount)}\n`+
@@ -216,7 +213,7 @@
       activeContracts().forEach(({cl,c})=>{
         const x=chargeFor(cl,c,d.getFullYear(),d.getMonth());
         const due=new Date(x.due);due.setHours(0,0,0,0);
-        if(x.status!=='paid'&&due>today)out.push(x);
+        if(x.status!=='paid'&&x.status!=='not_due'&&due>today)out.push(x);
       });
     }
     return out.sort((a,b)=>a.due-b.due||a.cl.name.localeCompare(b.cl.name,'pt-BR'));
@@ -338,7 +335,6 @@
             modality:(document.getElementById('kModalityV7')?.value||k.modality||'Padrão').trim(),
             installments:Math.max(1,Number(document.getElementById('kInstallmentsV7')?.value)||Number(k.installments)||1),
             summaryTotal:Math.max(0,Number(document.getElementById('kTotalV7')?.value)||Number(k.summaryTotal)||0),
-            endDate:document.getElementById('kEndV7')?.value||k.endDate||'',
             interestRate:Number(document.getElementById('kRate')?.value)||Number(k.interestRate)||0,
             fixedAmount:Number(document.getElementById('kFixed')?.value)||Number(k.fixedAmount)||0,
             billingType:document.getElementById('kType')?.value||k.billingType,

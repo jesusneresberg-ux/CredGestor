@@ -28,12 +28,8 @@
     return true;
   }
   function firstDueDateV20(k){
-    const start=String(k?.startDate||todayISO());
-    const m=start.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if(!m)return '';
-    const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);
-    d.setMonth(d.getMonth()+1);
-    return ymd(dueDateFor(d.getFullYear(),d.getMonth(),k?.baseDueDay||Number(m[3])));
+    const d=typeof firstPaymentDate==='function'?firstPaymentDate(k):null;
+    return d?ymd(d):'';
   }
   function payoffReceiptTextV20(cl,k,payment){
     return `🏦 *Quitação do Empréstimo - ${loanCodeV20(k)}*\n`+

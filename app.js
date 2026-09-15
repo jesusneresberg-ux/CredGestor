@@ -80,15 +80,32 @@ function getPayment(c,ref){ return (c.payments||[]).find(p=>p.reference===ref); 
 function activeContracts(){
   return state.clients.flatMap(cl=>(cl.contracts||[]).filter(c=>c.active!==false).map(c=>({cl,c})));
 }
+function contractStartDate(c){
+  const m=String(c?.startDate||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return null;
+  const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);
+  return Number.isNaN(d.getTime())?null:d;
+}
+function firstPaymentDate(c){
+  const start=contractStartDate(c);
+  return start?addDays(start,30):null;
+}
 function chargeFor(cl,c,year,monthIndex){
   const ref=`${year}-${String(monthIndex+1).padStart(2,'0')}`;
-  const due=dueDateFor(year,monthIndex,c.baseDueDay);
   const payment=getPayment(c,ref);
-  const amount=monthlyDue(c);
+  const firstDue=firstPaymentDate(c);
+  let due=dueDateFor(year,monthIndex,c.baseDueDay);
+  let beforeFirst=false;
+  if(firstDue){
+    const targetMonth=year*12+monthIndex,firstMonth=firstDue.getFullYear()*12+firstDue.getMonth();
+    if(targetMonth<firstMonth){beforeFirst=true;due=new Date(firstDue);}
+    else if(targetMonth===firstMonth){due=new Date(firstDue);}
+  }
+  const amount=beforeFirst&&!payment?0:monthlyDue(c);
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
-  let status=payment?'paid':(d0<now?'late':'open');
-  return {cl,c,ref,due,payment,amount,status};
+  let status=payment?'paid':(beforeFirst?'not_due':(d0<now?'late':'open'));
+  return {cl,c,ref,due,payment,amount,status,firstDue};
 }
 function allChargesAround(){
   const now=new Date(), arr=[];
@@ -96,7 +113,7 @@ function allChargesAround(){
     const d=new Date(now.getFullYear(),now.getMonth()+off,1);
     activeContracts().forEach(({cl,c})=>arr.push(chargeFor(cl,c,d.getFullYear(),d.getMonth())));
   }
-  return arr.sort((a,b)=>a.due-b.due);
+  return arr.filter(x=>x.status!=='not_due').sort((a,b)=>a.due-b.due);
 }
 function delinquencyRate(){
   const arr=allChargesAround().filter(x=>x.due<=new Date());
@@ -244,9 +261,9 @@ function renderCharges(){
     charges=allChargesAround().filter(x=>x.status==='late');
   }else if(chargeFilter==='next'){
     const n=new Date(now.getFullYear(),now.getMonth()+1,1);
-    charges=activeContracts().map(({cl,c})=>chargeFor(cl,c,n.getFullYear(),n.getMonth()));
+    charges=activeContracts().map(({cl,c})=>chargeFor(cl,c,n.getFullYear(),n.getMonth())).filter(x=>x.status!=='not_due');
   }else{
-    charges=activeContracts().map(({cl,c})=>chargeFor(cl,c,now.getFullYear(),now.getMonth()));
+    charges=activeContracts().map(({cl,c})=>chargeFor(cl,c,now.getFullYear(),now.getMonth())).filter(x=>x.status!=='not_due');
   }
   document.getElementById('view').innerHTML=`
     <div class="tabs">
@@ -304,7 +321,7 @@ function renderSettings(){
     <div class="card">
       <div class="switch-row"><div><div class="title">Google Agenda</div><div class="muted">Exibe botão para adicionar vencimentos</div></div><button class="switch ${state.settings.googleCalendar?'on':''}" id="calendarSwitch" aria-label="Google Agenda"></button></div>
       <div class="switch-row"><div><div class="title">Notificações</div><div class="muted">Lembretes ao abrir o app</div></div><button class="switch ${state.settings.notifications?'on':''}" id="notificationSwitch" aria-label="Notificações"></button></div>
-      <div class="rule-note">Regra de vencimento: o contrato guarda o dia-base. Se o mês não possuir esse dia, usa o último dia do mês. Ex.: dia 31 → 30 em setembro e 28/29 em fevereiro; no mês seguinte volta ao dia 31 quando existir.</div>
+      <div class="rule-note">Regra de vencimento: o primeiro pagamento vence 30 dias após a data de início do empréstimo. Depois disso, o contrato segue o dia-base; se o mês não possuir esse dia, usa o último dia do mês.</div>
     </div>
     <div class="section-title"><h2>Dados e backup</h2></div>
     <div class="card">

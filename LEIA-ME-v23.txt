@@ -1,0 +1,8 @@
+CrediGestor v23
+
+Atualização solicitada:
+1. Data de término do contrato removida das telas, comprovantes, estado e CSV.
+2. Comprovantes mantidos/padronizados com emojis em todos os fluxos ativos (empréstimo, pagamento, amortização e quitação).
+3. Primeiro vencimento/pagamento programado exatamente 30 dias após a data de início do empréstimo. Após o primeiro vencimento, permanece a regra do dia-base do contrato e ajuste para o último dia em meses sem esse dia.
+
+Base: v21 completa + módulo v22.

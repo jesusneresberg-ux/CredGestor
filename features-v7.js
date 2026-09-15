@@ -1,5 +1,5 @@
 // CrediGestor v7 — comprovante/resumo do empréstimo por WhatsApp.
-// Adiciona código EMP, modalidade, parcelas, valor total e término ao resumo.
+// Adiciona código EMP, modalidade, parcelas e valor total ao resumo.
 (function(){
   'use strict';
 
@@ -38,6 +38,7 @@
     return changed;
   }
   if(ensureLoanCodesV7())saveState();
+  allLoansV7().forEach(({k})=>{if(Object.prototype.hasOwnProperty.call(k,'endDate'))delete k.endDate});
 
   function parseISODateV7(value){
     const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return null;
@@ -66,11 +67,10 @@
   function receiptMetaV7(k){
     const installments=Math.max(1,Number(k.installments)||1);
     const total=Number(k.summaryTotal)>0?Number(k.summaryTotal):suggestedTotalV7(k,installments);
-    const end=k.endDate||addMonthsV7(k.startDate,installments);
     return {
       code:k.loanCode||nextLoanCodeV7(),
       modality:k.modality||'Padrão',
-      installments,total,end,
+      installments,total,
       installmentValue:installments?total/installments:total
     };
   }
@@ -90,7 +90,6 @@
       `💵 Valor Total: ${brl(m.total)}\n`+
       `📊 Taxa de Juros: ${rateLabelV7(k.interestRate)}%\n`+
       `📅 Data do Início: ${formatDateV7(k.startDate)}\n`+
-      `📅 Data do Término: ${formatDateV7(m.end)}\n`+
       `📦 Modalidade: ${m.modality}\n`+
       `🔢 Parcelas: ${m.installments}x de ${brl(m.installmentValue)}`;
   }
@@ -138,7 +137,6 @@
     const rule=document.querySelector('#modalContent .rule-note');const saveBtn=document.getElementById('saveContractBtn');if(!rule||!saveBtn||document.getElementById('loanSummaryFieldsV7'))return;
     const proposed=k?.loanCode||nextLoanCodeV7(),installments=Math.max(1,Number(k?.installments)||1);
     const total=Number(k?.summaryTotal)>0?Number(k.summaryTotal):suggestedTotalV7(k||{initialPrincipal:Number(fieldValueV7('kPrincipal'))||0,billingType:fieldValueV7('kType','interest'),fixedAmount:Number(fieldValueV7('kFixed'))||0,interestRate:Number(fieldValueV7('kRate'))||0},installments);
-    const end=k?.endDate||addMonthsV7(k?.startDate||fieldValueV7('kStart',todayISO()),installments);
     rule.insertAdjacentHTML('beforebegin',`<div class="v7-summary-box" id="loanSummaryFieldsV7">
       <div class="section-title compact-title"><h2>Comprovante pelo WhatsApp</h2><small>resumo do empréstimo</small></div>
       <div class="v7-summary-grid">
@@ -146,9 +144,8 @@
         <div class="field"><label>Modalidade</label><input id="kModalityV7" value="${esc(k?.modality||'Padrão')}" maxlength="40"></div>
         <div class="field"><label>Parcelas</label><input id="kInstallmentsV7" type="number" min="1" max="360" value="${installments}"></div>
         <div class="field"><label>Valor total do resumo</label><input id="kTotalV7" type="number" step="0.01" min="0" value="${Number(total||0).toFixed(2)}"></div>
-        <div class="field"><label>Data do término</label><input id="kEndV7" type="date" value="${esc(end||'')}"></div>
       </div>
-      <div class="actions"><button type="button" class="soft-btn" id="recalcSummaryV7">Recalcular total e término</button>${k?'<button type="button" class="small-btn v7-receipt" id="sendReceiptModalV7">📤 Enviar agora</button>':''}</div>
+      <div class="actions"><button type="button" class="soft-btn" id="recalcSummaryV7">Recalcular total</button>${k?'<button type="button" class="small-btn v7-receipt" id="sendReceiptModalV7">📤 Enviar agora</button>':''}</div>
       <div class="v7-help">O comprovante usa estes dados para montar automaticamente o resumo e abrir o WhatsApp do telefone cadastrado no cliente.</div>
     </div>`);
 
@@ -156,7 +153,6 @@
       const n=Math.max(1,Number(fieldValueV7('kInstallmentsV7'))||1),principal=Number(fieldValueV7('kPrincipal'))||Number(k?.initialPrincipal)||0;
       const temp={initialPrincipal:principal,billingType:fieldValueV7('kType',k?.billingType||'interest'),fixedAmount:Number(fieldValueV7('kFixed'))||0,interestRate:Number(fieldValueV7('kRate'))||0};
       document.getElementById('kTotalV7').value=suggestedTotalV7(temp,n).toFixed(2);
-      document.getElementById('kEndV7').value=addMonthsV7(fieldValueV7('kStart',todayISO()),n);
     };
     document.getElementById('recalcSummaryV7').onclick=recalc;
     if(k)document.getElementById('sendReceiptModalV7').onclick=()=>{
@@ -165,7 +161,6 @@
         modality:fieldValueV7('kModalityV7','Padrão').trim()||'Padrão',
         installments:Math.max(1,Number(fieldValueV7('kInstallmentsV7'))||1),
         summaryTotal:Math.max(0,Number(fieldValueV7('kTotalV7'))||0),
-        endDate:fieldValueV7('kEndV7',''),
         billingType:fieldValueV7('kType',k.billingType||'interest'),
         interestRate:Number(fieldValueV7('kRate'))||0,
         fixedAmount:Number(fieldValueV7('kFixed'))||0,
@@ -182,13 +177,12 @@
         modality:fieldValueV7('kModalityV7','Padrão').trim()||'Padrão',
         installments:Math.max(1,Number(fieldValueV7('kInstallmentsV7'))||1),
         summaryTotal:Math.max(0,Number(fieldValueV7('kTotalV7'))||0),
-        endDate:fieldValueV7('kEndV7','')
       };
       baseSave();
       const c2=(state.clients||[]).find(x=>x.id===clientId);if(!c2)return;
       let saved=contractId?(c2.contracts||[]).find(x=>x.id===contractId):(c2.contracts||[]).find(x=>!beforeIds.has(x.id));
       if(!saved)saved=(c2.contracts||[])[(c2.contracts||[]).length-1];
-      if(saved){Object.assign(saved,meta);if(!saved.endDate)saved.endDate=addMonthsV7(saved.startDate,meta.installments);saveState()}
+      if(saved){Object.assign(saved,meta);delete saved.endDate;saveState()}
     };
   }
 
@@ -198,7 +192,7 @@
   // CSV completo também passa a preservar os campos do comprovante.
   try{
     if(typeof CSV_HEADERS3!=='undefined'&&Array.isArray(CSV_HEADERS3)){
-      ['codigo_emprestimo','modalidade','parcelas_resumo','valor_total_resumo','data_termino'].forEach(h=>{if(!CSV_HEADERS3.includes(h))CSV_HEADERS3.push(h)});
+      ['codigo_emprestimo','modalidade','parcelas_resumo','valor_total_resumo'].forEach(h=>{if(!CSV_HEADERS3.includes(h))CSV_HEADERS3.push(h)});
     }
     if(typeof csvRows3==='function'){
       const csvRowsBeforeV7=csvRows3;
@@ -207,7 +201,7 @@
           if(String(r.tipo_registro||'').toUpperCase()!=='EMPRESTIMO')return r;
           const hit=allLoansV7().find(x=>x.k.id===r.emprestimo_id);if(!hit)return r;
           const m=receiptMetaV7(hit.k);
-          return {...r,codigo_emprestimo:m.code,modalidade:m.modality,parcelas_resumo:m.installments,valor_total_resumo:m.total,data_termino:m.end};
+          return {...r,codigo_emprestimo:m.code,modalidade:m.modality,parcelas_resumo:m.installments,valor_total_resumo:m.total};
         });
       };
     }
@@ -226,7 +220,6 @@
           k.modality=get(row,'modalidade')||k.modality||'Padrão';
           k.installments=installments;
           const total=Number(String(get(row,'valor_total_resumo')).replace(',','.'));if(total>0)k.summaryTotal=total;
-          k.endDate=get(row,'data_termino')||k.endDate||addMonthsV7(k.startDate,installments);
         }
         ensureLoanCodesV7();saveState();render();return result;
       };

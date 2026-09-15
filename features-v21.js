@@ -45,7 +45,7 @@
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,'_blank','noopener');return true;
   }
   function loanCodeV21(k){return k?.loanCode||k?.title||'EMPRÉSTIMO'}
-  function firstDueV21(k){const m=String(k?.startDate||todayISO()).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return '';const base=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);return ymd(dueDateFor(base.getFullYear(),base.getMonth()+1,k?.baseDueDay||Number(m[3])))}
+  function firstDueV21(k){const d=typeof firstPaymentDate==='function'?firstPaymentDate(k):null;return d?ymd(d):''}
   function currentBalanceV21(k){try{return Math.max(0,Number(contractBalance(k))||0)}catch(_){return Math.max(0,Number(k?.currentPrincipal)||Number(k?.initialPrincipal)||0)}}
   function currentInterestV21(k){
     const bal=currentBalanceV21(k);if(bal<=0)return 0;
@@ -56,11 +56,13 @@
   }
   function payoffQuoteV21(k){const principal=currentBalanceV21(k),alreadyPaid=!!getPayment(k,monthRef()),interest=alreadyPaid?0:currentInterestV21(k);return {principal,interest,total:principal+interest}}
   function nextDueV21(k){
-    const today=nowDayV21(),day=Number(k?.baseDueDay)||1;
+    const today=nowDayV21(),day=Number(k?.baseDueDay)||1,first=typeof firstPaymentDate==='function'?firstPaymentDate(k):null;
+    if(first){first.setHours(0,0,0,0);const firstRef=`${first.getFullYear()}-${String(first.getMonth()+1).padStart(2,'0')}`;if(today<=first&&!getPayment(k,firstRef))return first}
     let due=dueDateFor(today.getFullYear(),today.getMonth(),day);due.setHours(0,0,0,0);
-    const ref=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}`;
-    if(due<today || getPayment(k,ref)){
+    let ref=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}`;
+    if(due<today || getPayment(k,ref) || (first&&due<first)){
       due=dueDateFor(today.getFullYear(),today.getMonth()+1,day);due.setHours(0,0,0,0);
+      if(first&&due<first)due=new Date(first);
     }
     return due;
   }
@@ -99,7 +101,7 @@
   }
   function openPaymentsHubV21(clientId,contractId,ref){
     const cl=(state.clients||[]).find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;
-    const useRef=String(ref||monthRef()),[y,m]=useRef.split('-').map(Number),charge=chargeFor(cl,k,y,m-1),existing=getPayment(k,useRef),q=payoffQuoteV21(k);
+    const defaultDue=nextDueV21(k),defaultRef=`${defaultDue.getFullYear()}-${String(defaultDue.getMonth()+1).padStart(2,'0')}`,useRef=String(ref||defaultRef),[y,m]=useRef.split('-').map(Number),charge=chargeFor(cl,k,y,m-1),existing=getPayment(k,useRef),q=payoffQuoteV21(k);
     openModal(`<h2>Pagamentos</h2><div class="card"><div class="muted">${esc(cl.name)} • ${esc(loanCodeV21(k))}</div><div class="v21-summary"><div><small>Capital atual</small><strong>${brl(q.principal)}</strong></div><div><small>Juros atuais</small><strong>${brl(q.interest)}</strong></div><div class="v21-total"><small>Quitação capital + juros</small><strong>${brl(q.total)}</strong></div></div></div><div class="v21-choice-grid"><button type="button" class="v21-choice" id="v21Parcel"><span class="ico">💵</span><span><b>Pagar Parcela</b><small>Registrar a cobrança do mês e gerar comprovante.</small></span></button><button type="button" class="v21-choice" id="v21Amortize"><span class="ico">📉</span><span><b>Amortizar Capital</b><small>Reduzir o principal e recalcular os juros futuros.</small></span></button><button type="button" class="v21-choice" id="v21Payoff"><span class="ico">✅</span><span><b>Quitar Capital + Juros</b><small>Receber tudo, zerar o saldo e encerrar o contrato.</small></span></button></div><div class="rule-note">Escolha uma opção. Nenhuma baixa é feita antes da confirmação final.</div>`,()=>{
       document.getElementById('v21Parcel').onclick=()=>openParcelV21(clientId,contractId,useRef,existing,charge);
       document.getElementById('v21Amortize').onclick=()=>openAmortizeV21(clientId,contractId,useRef);
