@@ -67,13 +67,16 @@
     return due;
   }
   function paymentReceiptV21(cl,k,p){
-    return `✅ *Pagamento recebido*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💰 Valor pago: ${brl(p?.amount||0)}\n💳 Saldo de capital: ${brl(currentBalanceV21(k))}\n📅 Data: ${fmtDateV21(p?.paidAt)}\n📄 Contrato: ${loanCodeV21(k)}\n✅ Situação: Pago`;
+    if(typeof window.paymentReceiptV24==='function')return window.paymentReceiptV24(cl,k,p);
+    return `✅ *Pagamento recebido*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💰 Valor pago: ${brl(p?.amount||0)}\n📅 Data: ${fmtDateV21(p?.paidAt)}\n📄 Contrato: ${loanCodeV21(k)}\n✅ Situação: Pago`;
   }
   function amortizationReceiptV21(cl,k,m){
-    return `📉 *Amortização de Capital*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💳 Saldo anterior: ${brl(m?.balanceBefore||0)}\n💰 Capital amortizado: ${brl(m?.amount||0)}\n💳 Novo saldo: ${brl(m?.balanceAfter||0)}\n📅 Data: ${fmtDateV21(m?.date)}\n📄 Contrato: ${loanCodeV21(k)}`;
+    if(typeof window.amortizationReceiptV24==='function')return window.amortizationReceiptV24(cl,k,m);
+    return `📉 *Amortização de Capital*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💰 Capital amortizado: ${brl(m?.amount||0)}\n📅 Data: ${fmtDateV21(m?.date)}\n📄 Contrato: ${loanCodeV21(k)}`;
   }
   function payoffReceiptV21(cl,k,p){
-    return `🏦 *Quitação Total - ${loanCodeV21(k)}*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💰 Capital pago: ${brl(p?.principalAmount||0)}\n📊 Juros pagos: ${brl(p?.interestAmount||0)}\n💵 Total pago: ${brl(p?.amount||0)}\n📅 Data: ${fmtDateV21(p?.paidAt)}\n💳 Saldo final: ${brl(0)}\n📌 Status: *QUITADO*`;
+    if(typeof window.payoffReceiptV24==='function')return window.payoffReceiptV24(cl,k,p);
+    return `🏦 *Quitação Total - ${loanCodeV21(k)}*\n\n👤 Cliente: ${cl?.name||'Cliente'}\n💵 Total pago: ${brl(p?.amount||0)}\n📅 Data: ${fmtDateV21(p?.paidAt)}\n✅ Status: *QUITADO*`;
   }
 
   function registerParcelV21(cl,k,ref,amount,paidAt,method,note){

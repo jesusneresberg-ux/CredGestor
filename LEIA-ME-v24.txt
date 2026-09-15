@@ -1,0 +1,8 @@
+CrediGestor v24
+
+Atualização de comprovantes:
+- Todo resumo/comprovante usa padrão visual com emojis.
+- Resumo do contrato padronizado em Clientes, Empréstimos e Cobranças.
+- Novo empréstimo abre o mesmo padrão automaticamente.
+- Pagamento, amortização e quitação usam o mesmo bloco-base do contrato e acrescentam os dados da operação.
+- Data do Término volta a ser exibida no comprovante, calculada a partir da data de início e quantidade de parcelas, sem reintroduzir o campo persistente endDate removido na v23.
