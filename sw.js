@@ -1,5 +1,5 @@
-const CACHE='credigestor-v24';
-const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./features-v8.js','./features-v10.js','./features-v11.js','./features-v12.js','./features-v13.js','./features-v15.js','./features-v16.js','./features-v17.js','./features-v18.js','./features-v19.js','./features-v20.js','./features-v21.js','./features-v22.js','./features-v23.js','./features-v24.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE='credigestor-v25';
+const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./features-v8.js','./features-v10.js','./features-v11.js','./features-v12.js','./features-v13.js','./features-v15.js','./features-v16.js','./features-v17.js','./features-v18.js','./features-v19.js','./features-v20.js','./features-v21.js','./features-v22.js','./features-v23.js','./features-v24.js','./features-v25.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([
   self.clients.claim(),
