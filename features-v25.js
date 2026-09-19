@@ -139,13 +139,17 @@
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,'_blank','noopener');
     return true;
   }
-  function openContractReceiptV25(clientId,loanId,kOverride=null){
+  async function openContractReceiptV25(clientId,loanId,kOverride=null){
     syncAllV25();
     const cl=(state.clients||[]).find(x=>x.id===clientId);
     const k=kOverride||(cl?.contracts||[]).find(x=>x.id===loanId);
     if(!cl||!k)return false;
     syncContractV25(k);
-    try{saveState()}catch(_){ }
+    try{
+      if(!window.CREDIGESTOR_MULTITENANT||['administrador','gerente'].includes(window.CrediGestorCloud?.session().role)){
+        saveState();if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();
+      }
+    }catch(e){alert(e.message);return false;}
     return sendReceiptV25(cl,contractBlockV25(cl,k));
   }
 
@@ -242,7 +246,7 @@
 
   // Sincronização inicial dos contratos já existentes.
   syncAllV25();
-  try{saveState()}catch(_){ }
+  if(!window.CREDIGESTOR_MULTITENANT){try{saveState()}catch(_){ }}
 
   // Atualiza a tela atual para refletir o novo saldo sem exigir reabrir o aplicativo.
   try{

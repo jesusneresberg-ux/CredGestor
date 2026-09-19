@@ -361,6 +361,7 @@
     catch(_){}
   }
   function connectDriveV5(){
+    if(window.CREDIGESTOR_MULTITENANT){alert('A sincronização desta versão usa somente o Firebase.');return;}
     const id=String(state.settings?.driveClientId||'').trim();if(!id){openDriveSetupV5();return;}
     if(!window.google?.accounts?.oauth2){alert('A biblioteca do Google ainda não carregou. Verifique a internet e tente novamente.');return;}
     driveTokenClientV5=google.accounts.oauth2.initTokenClient({
@@ -385,6 +386,7 @@
     const data=await r.json();state.settings.driveFolderId=data.id;saveState();return data.id;
   }
   async function uploadDriveFileV5(file){
+    if(window.CREDIGESTOR_MULTITENANT)throw Error('O envio ao Drive antigo está desativado nesta versão. Baixe o backup JSON.');
     if(!driveConnectedV5()){connectDriveV5();throw new Error('Conecte a conta do Google Drive e toque novamente em enviar backup.');}
     const folderId=await ensureDriveFolderV5();const boundary='credigestor_'+Math.random().toString(36).slice(2);
     const metadata={name:file.name,parents:[folderId]};
@@ -423,7 +425,7 @@
     if(!card)return;
     const oldDrive=document.getElementById('driveBackupBtn3');
     if(oldDrive){const actions=oldDrive.closest('.actions');const note=actions?.nextElementSibling;actions?.remove();if(note?.classList.contains('rule-note'))note.remove();}
-    if(card.querySelector('#driveIntegrationV5'))return;
+    if(window.CREDIGESTOR_MULTITENANT||card.querySelector('#driveIntegrationV5'))return;
     const email=state.settings.driveEmail||'';const connected=driveConnectedV5();
     card.insertAdjacentHTML('beforeend',`<div id="driveIntegrationV5" style="margin-top:14px"><div class="section-title compact-title"><h2>Google Drive</h2><small>${driveConfiguredV5()?'integração cadastrada':'não configurado'}</small></div><div class="drive-status-v5"><span class="drive-dot-v5 ${connected?'on':''}"></span><b>${connected?'Conta conectada':driveConfiguredV5()?'Integração pronta para conectar':'Integração não cadastrada'}</b>${email?`<span class="muted">${esc(email)}</span>`:''}</div><div class="drive-grid-v5"><div class="actions"><button type="button" class="soft-btn" id="driveSetupBtnV5">${driveConfiguredV5()?'Editar integração':'Cadastrar integração'}</button><button type="button" class="${connected?'ghost-btn':'primary-btn'}" id="driveConnectBtnV5">${connected?'Reconectar conta':'Conectar conta do Drive'}</button>${connected?'<button type="button" class="ghost-btn" id="driveDisconnectBtnV5">Desconectar</button>':''}</div><div class="actions"><button type="button" class="primary-btn" id="driveJsonBtnV5" ${connected?'':'disabled'}>Backup JSON no Drive</button><button type="button" class="soft-btn" id="driveCsvBtnV5" ${connected?'':'disabled'}>CSV no Drive</button></div></div></div>`);
     document.getElementById('driveSetupBtnV5').onclick=openDriveSetupV5;document.getElementById('driveConnectBtnV5').onclick=connectDriveV5;

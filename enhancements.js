@@ -58,7 +58,7 @@ openClientModal=function(existingId){
     </div>
     <div class="field"><label>CEP</label><input id="fCep" inputmode="numeric" maxlength="9" value="${esc(formatCEP2(c?.cep||''))}" placeholder="00000-000"></div>
     <div class="field"><label>Observações</label><textarea id="fNotes">${esc(c?.notes||'')}</textarea></div>
-    <div class="rule-note">Nesta versão, os dados dos clientes ficam salvos no navegador deste aparelho. Eles não são enviados para o repositório público do GitHub.</div>
+    <div class="rule-note">${window.CREDIGESTOR_MULTITENANT?'Os dados são enviados ao Firebase da sua organização após a confirmação da gravação. Não são armazenados no GitHub.':'Os dados ficam neste navegador, fora do repositório público do GitHub.'}</div>
     <div class="actions"><button type="button" class="primary-btn" id="saveClientBtn">Salvar cliente</button>${c?'<button type="button" class="danger-btn" id="deleteClientBtn">Excluir</button>':''}</div>
   `,()=>{
     const cpf=document.getElementById('fCpf'),cep=document.getElementById('fCep'),uf=document.getElementById('fUf');

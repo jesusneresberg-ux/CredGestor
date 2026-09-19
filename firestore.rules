@@ -1,62 +1,138 @@
 rules_version = '2';
+// users: immutable organization pointer (private); members: canonical role/active ACL.
+// organizations: immutable owner and plan. invitations: verified-email, single-use, <=7 days.
+// appData/main: preserved legacy state, increasing revision and applied receipt IDs.
+// paymentEvents: immutable installment receipts tied to a real contract.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function memberPath(orgId) { return /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid); }
-    function member(orgId) { return get(memberPath(orgId)); }
-    function activeMember(orgId) { return signedIn() && exists(memberPath(orgId)) && member(orgId).data.active == true; }
-    function role(orgId) { return member(orgId).data.role; }
-    function admin(orgId) { return activeMember(orgId) && role(orgId) == 'administrador'; }
-    function manager(orgId) { return activeMember(orgId) && role(orgId) in ['administrador', 'gerente']; }
-    function collector(orgId) { return activeMember(orgId) && role(orgId) in ['administrador', 'gerente', 'cobrador']; }
-    function invitePath() { return /databases/$(database)/documents/invitations/$(request.auth.token.email); }
-    function validInvite(orgId) {
-      return signedIn() && request.auth.token.email != null && exists(invitePath()) &&
-        get(invitePath()).data.organizationId == orgId && get(invitePath()).data.active == true;
+    function signed() { return request.auth != null && request.auth.token.email_verified == true && request.auth.token.email is string; }
+    function email() { return request.auth.token.email.lower(); }
+    function orgPath(org) { return /databases/$(database)/documents/organizations/$(org); }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function memberPath(org, uid) { return /databases/$(database)/documents/organizations/$(org)/members/$(uid); }
+    function invitePath() { return /databases/$(database)/documents/invitations/$(email()); }
+    function text(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+    function id(v) { return text(v,128) && v.matches('^[A-Za-z0-9_-]+$'); }
+    function active(org) {
+      return signed() && exists(orgPath(org)) && get(orgPath(org)).data.active == true
+        && exists(memberPath(org,request.auth.uid)) && get(memberPath(org,request.auth.uid)).data.active == true
+        && get(userPath(request.auth.uid)).data.organizationId == org;
     }
-
+    function role(org) { return get(memberPath(org,request.auth.uid)).data.role; }
+    function admin(org) { return active(org) && role(org) == 'administrador'; }
+    function manager(org) { return active(org) && role(org) in ['administrador','gerente']; }
+    function validOrg(d, org) {
+      return d.keys().hasOnly(['name','ownerUid','plan','active','createdAt']) && text(d.name,120)
+        && org == 'org_' + d.ownerUid && text(d.ownerUid,128) && d.plan == 'inicial'
+        && d.active == true && d.createdAt is timestamp;
+    }
+    function validUser(d) {
+      return d.keys().hasOnly(['organizationId','name','email','createdAt']) && text(d.organizationId,160)
+        && text(d.name,120) && text(d.email,254) && d.createdAt is timestamp;
+    }
+    function validMember(d, uid) {
+      return d.keys().hasOnly(['uid','name','email','role','active','joinedAt']) && d.uid == uid
+        && text(d.name,120) && text(d.email,254) && d.role in ['administrador','gerente','cobrador','consulta']
+        && d.active is bool && d.joinedAt is timestamp;
+    }
+    function bootstrap(org) {
+      return signed() && org == 'org_' + request.auth.uid && !exists(orgPath(org)) && !exists(userPath(request.auth.uid))
+        && getAfter(orgPath(org)).data.ownerUid == request.auth.uid
+        && getAfter(userPath(request.auth.uid)).data.organizationId == org
+        && getAfter(memberPath(org,request.auth.uid)).data.role == 'administrador';
+    }
+    function invited(org, requestedRole) {
+      let inv = get(invitePath()).data;
+      return signed() && exists(orgPath(org)) && get(orgPath(org)).data.active == true
+        && inv.organizationId == org && inv.role == requestedRole && inv.active == true
+        && inv.acceptedBy == '' && inv.expiresAt > request.time
+        && getAfter(invitePath()).data.acceptedBy == request.auth.uid
+        && !exists(userPath(request.auth.uid)) && getAfter(userPath(request.auth.uid)).data.organizationId == org;
+    }
     match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid &&
-        request.resource.data.email == request.auth.token.email &&
-        ((request.resource.data.organizationId == 'org_' + request.auth.uid && request.resource.data.role == 'administrador') ||
-         validInvite(request.resource.data.organizationId));
-      allow update: if signedIn() && ((request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
-        admin(resource.data.organizationId));
-      allow delete: if false;
+      allow get: if signed() && uid == request.auth.uid;
+      allow create: if signed() && uid == request.auth.uid && validUser(request.resource.data)
+        && request.resource.data.email == email() && request.resource.data.createdAt == request.time
+        && (bootstrap(request.resource.data.organizationId) || invited(request.resource.data.organizationId,
+          getAfter(memberPath(request.resource.data.organizationId,uid)).data.role));
+      allow update, delete, list: if false;
     }
-
-    match /invitations/{email} {
-      allow get: if signedIn() && resource.data.email == request.auth.token.email;
-      allow list: if false;
-      allow create, update: if signedIn() && admin(request.resource.data.organizationId);
-      allow delete: if signedIn() && (resource.data.email == request.auth.token.email || admin(resource.data.organizationId));
+    function validInvite(d, address) {
+      return d.keys().hasOnly(['email','organizationId','organizationName','role','active','invitedBy','createdAt','expiresAt','acceptedBy','acceptedAt'])
+        && d.email == address && text(d.email,254) && d.email == d.email.lower()
+        && text(d.organizationId,160) && text(d.organizationName,120) && d.role in ['gerente','cobrador','consulta']
+        && d.active is bool && text(d.invitedBy,128) && d.createdAt is timestamp && d.expiresAt is timestamp
+        && d.acceptedBy is string && d.acceptedBy.size() <= 128 && (d.acceptedAt == null || d.acceptedAt is timestamp);
     }
-
-    match /organizations/{orgId} {
-      allow create: if signedIn() && orgId == 'org_' + request.auth.uid && request.resource.data.ownerUid == request.auth.uid;
-      allow read: if activeMember(orgId);
-      allow update, delete: if admin(orgId);
-
+    match /invitations/{address} {
+      allow get: if signed() && (address == email() || admin(resource.data.organizationId));
+      allow list, delete: if false;
+      allow create: if signed() && validInvite(request.resource.data,address) && admin(request.resource.data.organizationId)
+        && request.resource.data.invitedBy == request.auth.uid && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt > request.time && request.resource.data.expiresAt <= request.time + duration.value(7,'d')
+        && request.resource.data.acceptedBy == '' && request.resource.data.acceptedAt == null;
+      allow update: if signed() && validInvite(request.resource.data,address)
+        && request.resource.data.organizationId == resource.data.organizationId && resource.data.acceptedBy == ''
+        && ((admin(resource.data.organizationId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','active','expiresAt'])
+          && request.resource.data.expiresAt > request.time && request.resource.data.expiresAt <= request.time + duration.value(7,'d'))
+        || (address == email() && request.resource.data.acceptedBy == request.auth.uid && request.resource.data.acceptedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedBy','acceptedAt'])
+          && invited(resource.data.organizationId,getAfter(memberPath(resource.data.organizationId,request.auth.uid)).data.role)));
+    }
+    match /organizations/{org} {
+      allow get: if active(org);
+      allow create: if validOrg(request.resource.data,org) && bootstrap(org) && request.resource.data.createdAt == request.time;
+      allow update: if admin(org) && validOrg(request.resource.data,org) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
+      allow list, delete: if false;
       match /members/{uid} {
-        allow read: if activeMember(orgId);
-        allow create: if signedIn() && ((request.auth.uid == uid &&
-          ((orgId == 'org_' + request.auth.uid && request.resource.data.role == 'administrador') || validInvite(orgId))) || admin(orgId));
-        allow update: if admin(orgId);
-        allow delete: if admin(orgId) && uid != request.auth.uid;
+        allow get: if signed() && (uid == request.auth.uid || admin(org));
+        allow list: if admin(org);
+        allow create: if signed() && uid == request.auth.uid && validMember(request.resource.data,uid)
+          && request.resource.data.email == email() && request.resource.data.active == true && request.resource.data.joinedAt == request.time
+          && ((bootstrap(org) && request.resource.data.role == 'administrador') || invited(org,request.resource.data.role));
+        allow update: if admin(org) && uid != request.auth.uid && uid != get(orgPath(org)).data.ownerUid
+          && validMember(request.resource.data,uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','active']);
+        allow delete: if false;
       }
-
-      match /appData/{document} {
-        allow read: if activeMember(orgId);
-        allow create, update: if manager(orgId);
-        allow delete: if admin(orgId);
+      function validState(d) {
+        return d.keys().hasOnly(['schemaVersion','state','revision','appliedEvents','updatedBy','updatedAt','writerId'])
+          && d.schemaVersion == 261 && d.state is map && d.state.size() <= 40
+          && d.state.clients is list && d.state.clients.size() <= 2000
+          && d.state.settings is map && d.state.settings.size() <= 120 && d.state.goals is map && d.state.goals.size() <= 30
+          && d.revision is int && d.revision >= 0 && d.appliedEvents is map && d.appliedEvents.size() <= 5000
+          && d.updatedBy == request.auth.uid && d.updatedAt == request.time && text(d.writerId,100);
       }
-
+      match /appData/{key} {
+        allow read: if key == 'main' && active(org);
+        allow create: if key == 'main' && admin(org) && validState(request.resource.data) && request.resource.data.revision == 0;
+        allow update: if key == 'main' && manager(org) && validState(request.resource.data)
+          && request.resource.data.revision == resource.data.revision + 1
+          && (admin(org) || request.resource.data.state.settings == resource.data.state.settings);
+        allow delete: if false;
+      }
+      function validReceipt(d, eventId) {
+        let p = d.payment;
+        let main = get(/databases/$(database)/documents/organizations/$(org)/appData/main).data;
+        let c = main.state.clients[d.clientIndex];
+        let k = c.contracts[d.contractIndex];
+        return d.keys().hasOnly(['clientId','contractId','clientIndex','contractIndex','payment','createdBy','createdAt'])
+          && id(d.clientId) && id(d.contractId) && d.clientIndex is int && d.clientIndex >= 0
+          && d.contractIndex is int && d.contractIndex >= 0 && c.id == d.clientId && k.id == d.contractId
+          && k.get('active',true) == true && k.get('closed',false) == false
+          && d.createdBy == request.auth.uid && d.createdAt == request.time
+          && p.keys().hasOnly(['id','reference','amount','paidAt','method','note','status','type'])
+          && p.id == eventId && p.reference is string && p.reference.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+          && eventId == d.clientId + '__' + d.contractId + '__' + p.reference
+          && p.amount is number && p.amount > 0 && p.amount <= 1000000000
+          && p.paidAt is string && p.paidAt.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+          && p.method in ['PIX','Dinheiro','Transferência','Cartão','Outro'] && p.note is string && p.note.size() <= 2000
+          && p.status == 'paid' && p.type == 'installment';
+      }
       match /paymentEvents/{eventId} {
-        allow read: if activeMember(orgId);
-        allow create: if collector(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update, delete: if manager(orgId);
+        allow read: if active(org);
+        allow create: if active(org) && role(org) in ['administrador','gerente','cobrador'] && validReceipt(request.resource.data,eventId);
+        allow update, delete: if false;
       }
     }
   }

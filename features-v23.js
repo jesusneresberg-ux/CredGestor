@@ -19,5 +19,5 @@
   }
   // Todos os comprovantes ativos usam marcadores visuais/emoji; mantém compatibilidade com módulos antigos.
   window.__credigestorV23={version:VERSION,firstPaymentDays:30,noContractEndDate:true,emojiReceipts:true};
-  try{saveState()}catch(_){ }
+  if(!window.CREDIGESTOR_MULTITENANT){try{saveState()}catch(_){ }}
 })();

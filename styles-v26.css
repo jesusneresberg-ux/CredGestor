@@ -7,5 +7,14 @@
 .v26-account-row{display:flex;align-items:center;gap:12px}.v26-avatar{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#e2e8f0;display:grid;place-items:center;font-weight:800}
 .v26-role{display:inline-flex;padding:4px 9px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:800}.v26-sync{font-size:12px;color:#64748b;margin-top:8px}
 .v26-member{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #e2e8f0}.v26-member:first-child{border-top:0}
-body[data-v26-role="consulta"] .danger-btn,body[data-v26-role="consulta"] .primary-btn,body[data-v26-role="consulta"] .v6-delete{display:none!important}
-body[data-v26-role="cobrador"] .danger-btn,body[data-v26-role="cobrador"] .v6-delete,body[data-v26-role="cobrador"] #settingsNavBtn{display:none!important}
+body[data-v26-locked="true"] #app{display:none!important}
+.v26-banner{position:sticky;top:0;z-index:999;background:#eff6ff;color:#1e3a8a;padding:10px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.v26-banner button{border:1px solid #93c5fd;border-radius:8px;padding:6px 12px;cursor:pointer;background:white;color:#1e3a8a}
+.v26-banner[data-status="error"],.v26-banner[data-status="conflict"]{background:#fff1f2;color:#991b1b}
+#v26Account{width:min(720px,94vw);max-height:90vh;border:0;border-radius:18px;padding:24px;color:#0f172a;background:white}
+#v26Account::backdrop{background:rgba(15,23,42,.65)}
+#v26Account button,#v26Account input,#v26Account select{font:inherit;padding:9px;border-radius:8px;border:1px solid #cbd5e1}
+#v26Account button{cursor:pointer;background:#eff6ff}#v26Account label{display:grid;gap:5px;margin:12px 0}
+#v26Account .v26-section{margin-top:20px;padding-top:16px;border-top:1px solid #cbd5e1}
+#v26Account .v26-message{white-space:pre-wrap;line-height:1.5}#v26Account .v26-actions{display:flex;gap:8px;flex-wrap:wrap}
+#v26Account .v26-member{align-items:flex-start;flex-wrap:wrap}

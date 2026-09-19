@@ -48,8 +48,8 @@
     ['c1','c2','c3','c4'].forEach(k=>{if(!validHexV6(state.settings.themeMix[k]))state.settings.themeMix[k]=d[k]});
     if(typeof state.settings.themeMixActive!=='boolean')state.settings.themeMixActive=false;
     if(!state.settings.pixType)state.settings.pixType='CNPJ';
-    if(!state.settings.pixKey)state.settings.pixKey='48379018000172';
-    if(!state.settings.pixName)state.settings.pixName='RJOTA';
+    if(!state.settings.pixKey)state.settings.pixKey=window.CREDIGESTOR_MULTITENANT?'':'48379018000172';
+    if(!state.settings.pixName)state.settings.pixName=window.CREDIGESTOR_MULTITENANT?'':'RJOTA';
     if(!state.settings.whatsappMessage)state.settings.whatsappMessage=V6_DEFAULT_MESSAGE;
   }
   ensureSettingsV6();

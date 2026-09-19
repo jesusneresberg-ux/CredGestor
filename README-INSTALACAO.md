@@ -1,73 +1,59 @@
-# CrediGestor v26 Multiusuário
+# CrediGestor 26.1 — versão de teste multiusuário
 
-Este pacote foi criado sobre a cópia real da branch `multiusuario-v1`. A `main` não foi alterada.
+Este pacote substitui a v26 anterior, que apresentou falhas na revisão. Não use o ZIP v26 antigo.
+As regras e o código de sincronização da v26.1 passaram pelos testes locais descritos em VALIDACAO-v26.md. A configuração do Firebase real e a validação final com suas contas ainda estão pendentes.
 
-## O que já está incluído
+## Primeiro passo: substituir os arquivos na branch de teste
 
-- Login com Google usando Firebase Authentication.
-- Uma organização isolada para cada proprietário.
-- Perfis Administrador, Gerente, Cobrador e Consulta.
-- Sincronização em tempo real pelo Cloud Firestore.
-- Convite de usuários por e-mail.
-- Regras de segurança do Firestore por organização e perfil.
-- Migração do `localStorage` sem apagar os dados atuais.
-- Cópia de segurança local antes do primeiro envio à nuvem.
-- Todos os recursos e arquivos da v25 preservados.
+1. Extraia CrediGestor-v26.1-Multiusuario.zip.
+2. Abra a branch **multiusuario-v1** do repositório CredGestor.
+3. Use Add file > Upload files. Envie o conteúdo da pasta extraída, não o ZIP nem uma pasta dentro da outra.
+4. Confirme que o destino é multiusuario-v1. Grave a substituição nessa branch.
+5. Não altere main, não faça merge e não mude a origem do GitHub Pages.
 
-## Instalação simples
+Se você já gravou a v26, não precisa apagar a branch: este novo envio substitui os arquivos correspondentes e adiciona v26-core.js.
+O histórico do GitHub continua guardando a versão anterior. Nenhuma carteira deve ser enviada ao GitHub: não inclua backups, dados de clientes, chaves privadas ou arquivos de conta de serviço.
 
-Faça uma etapa por vez e sempre confirme que a branch selecionada no GitHub é `multiusuario-v1`.
+## Depois: Firebase (com acompanhamento, uma etapa por vez)
 
-### 1. Enviar os arquivos ao GitHub
-
-1. Abra o repositório `jesusneresberg-ux/CredGestor`.
-2. Selecione a branch `multiusuario-v1`.
-3. Use **Add file > Upload files**.
-4. Envie todo o conteúdo desta pasta, mantendo os nomes dos arquivos.
-5. Confirme que `index.html`, `app.js` e `sw.js` serão substituídos somente nessa branch.
-
-Pare aqui antes de mexer no Firebase. Confirme no GitHub que o último envio aparece na branch `multiusuario-v1`.
-
-### 2. Criar o projeto Firebase
-
-1. Abra `https://console.firebase.google.com/`.
-2. Crie um projeto chamado `CrediGestor`.
-3. Dentro do projeto, adicione um aplicativo **Web**.
-4. Copie a configuração exibida pelo Firebase.
-5. No arquivo `firebase-config.js`, substitua somente os seis valores `COLE_AQUI`.
-
-### 3. Ativar o login Google
-
-1. No Firebase, abra **Authentication**.
-2. Clique em **Começar**.
-3. Em **Método de login**, ative **Google**.
-4. Informe o e-mail de suporte e salve.
-
-### 4. Criar o banco e publicar as regras
-
-1. No Firebase, abra **Firestore Database**.
-2. Clique em **Criar banco de dados** e escolha o modo de produção.
-3. Abra a aba **Regras**.
-4. Substitua o conteúdo pelo arquivo `firestore.rules` deste pacote.
-5. Clique em **Publicar**.
-
-### 5. Testar antes de usar os dados reais
-
-Abra a versão da branch `multiusuario-v1`, entre com Google e confirme:
-
-- o nome da organização aparece em **Minha conta**;
-- seu perfil aparece como **Administrador**;
-- os clientes atuais continuam visíveis;
-- existe uma chave de backup iniciada por `credigestor_backup_before_v26_` no navegador;
-- uma alteração feita em um aparelho aparece no outro após o login com a mesma conta.
-
-Não faça merge para `main` antes desses testes.
+Use um projeto de testes separado do seu ambiente atual.
+No projeto, será necessário cadastrar um app Web, habilitar o login Google no Authentication e criar um Cloud Firestore Standard.
+Preencha somente CREDIGESTOR_FIREBASE_CONFIG em firebase-config.js com a configuração Web fornecida pelo console. Essa configuração identifica o app; nunca use uma chave privada de conta de serviço.
+Publique no Firestore as regras deste pacote, firestore.rules. Não use modo de teste com acesso público.
+A URL de teste precisa estar em Authorized domains do Authentication. A prévia deve usar um endereço separado do site atual, sem trocar a branch publicada pelo GitHub Pages.
+A criação da prévia e o teste real de login ainda precisam ser feitos. Não basta abrir index.html como arquivo.
 
 ## Perfis
 
-- **Administrador:** acesso total, usuários e configurações.
-- **Gerente:** clientes, empréstimos, pagamentos e operação; sem gestão de usuários.
-- **Cobrador:** consulta a carteira e registra pagamentos.
-- **Consulta:** somente visualização.
+| Perfil | Permissões |
+| --- | --- |
+| Administrador | Carteira, configurações, convites e perfis de outros membros; não altera o proprietário |
+| Gerente | Carteira, contratos e pagamentos; sem mudar configurações ou acesso da equipe |
+| Cobrador | Leitura da organização e registro de parcelas em Minha conta; não altera contratos nem corrige/exclui recibos |
+| Consulta | Leitura da organização; nenhuma escrita |
 
-O primeiro usuário que entra cria a própria organização e recebe o perfil Administrador. Para adicionar outra pessoa, abra **Minha conta**, crie o convite com o e-mail exato da Conta Google e escolha o perfil.
+Todos os membros ativos leem a carteira completa de sua própria organização. Não há carteira individual por cobrador nesta versão.
+No primeiro login sem convite, cria-se uma organização vazia. Um convite deve ser criado antes do primeiro login do convidado.
+Uma conta pertence a uma organização. Convites duram seis dias, não enviam e-mail e só podem ser usados uma vez. Convites expirados precisam de intervenção do administrador do projeto nesta versão.
+O Administrador pode promover outro membro depois que ele entrar. O proprietário não pode ser rebaixado/desativado pela interface.
+Organizações novas começam sem chave PIX. Dados PIX existentes são mantidos quando você escolhe migrar sua própria carteira.
+
+## Segurança e sincronização
+
+O login antigo, a biometria local antiga e a sincronização automática do Google Drive ficam desativados na v26.1; os arquivos históricos permanecem no pacote.
+O acesso utiliza Firebase Authentication. A decisão de permissão é aplicada pelo Firestore, não apenas pelos botões da tela.
+A carteira original em localStorage não é carregada automaticamente, apagada ou substituída no modo de nuvem. Sair da conta limpa a carteira da memória e fecha o formulário.
+Alterações administrativas usam uma revisão crescente. Se duas sessões alterarem a mesma revisão, uma delas precisa recarregar e reaplicar sua mudança. Não há mesclagem automática.
+Rascunhos não confirmados ficam separados por usuário/organização no armazenamento da aba e podem ser baixados em Minha conta. Baixe antes de fechar a aba; não são backups permanentes.
+Recebimentos do Cobrador usam registros imutáveis por cliente, contrato e referência mensal. Duplicações são bloqueadas.
+Se houver dois registros diferentes para a mesma parcela, Minha conta permite baixar as duas versões para revisão do administrador. O total usa o registro principal até a revisão; o recibo original não é apagado. Casos não conciliáveis pela edição normal exigem revisão assistida.
+Não há gravação offline garantida. Aguarde o indicador Conectado antes de considerar uma alteração confirmada.
+
+## Limites da versão de teste
+
+A carteira ainda é um documento por organização: limite da aplicação de 800 KB, até 2.000 clientes e até 5.000 recibos incorporados. Fotos podem atingir o limite rapidamente. Uma carteira maior exige adaptação antes de migrar.
+O Administrador e o Gerente são perfis de confiança para editar o conteúdo da carteira. Ainda não há trilha completa de auditoria de suas edições, faturamento, assinatura ou cobrança automática.
+O campo plan é apenas uma base estrutural. Isso não é um sistema de assinaturas pronto.
+Antes de usar dados reais, valide com duas organizações e os quatro perfis, confira os valores do seu backup e mantenha a main intacta até aprovar os resultados.
+
+Consulte MIGRACAO-v26.md antes de trazer seus dados.

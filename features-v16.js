@@ -40,6 +40,7 @@
   function fromB64url(text){const s=String(text||'').replace(/-/g,'+').replace(/_/g,'/');const p=s+'='.repeat((4-s.length%4)%4),raw=atob(p);return Uint8Array.from(raw,c=>c.charCodeAt(0))}
   function randomBytes(n=32){const a=new Uint8Array(n);crypto.getRandomValues(a);return a}
   async function biometricSupportedV16(){
+    if(window.CREDIGESTOR_MULTITENANT)return false;
     if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials)return false;
     try{return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()}catch{return false}
   }
@@ -71,6 +72,7 @@
     }
   }
   async function authenticateBiometricV16(){
+    if(window.CREDIGESTOR_MULTITENANT){alert('Use o login Google seguro desta versão.');return false;}
     const rec=biometricRecordV16();
     if(!rec?.credentialId){alert('A biometria ainda não foi cadastrada neste aparelho. Entre com Google e ative em Configurações > Conta e acesso.');return false}
     if(!(await biometricSupportedV16())){alert('A biometria não está disponível neste navegador. Use o login Google.');return false}
@@ -96,6 +98,7 @@
   window.authenticateBiometricV16=authenticateBiometricV16;
 
   function injectBiometricOverlayV16(){
+    if(window.CREDIGESTOR_MULTITENANT)return;
     const overlay=document.getElementById('v11LoginOverlay'),rec=biometricRecordV16();
     if(!overlay||!rec?.credentialId||overlay.querySelector('#biometricLoginV16'))return;
     let actions=overlay.querySelector('.v11-login-actions');
@@ -107,6 +110,7 @@
   const observer=new MutationObserver(injectBiometricOverlayV16);observer.observe(document.documentElement,{childList:true,subtree:true});injectBiometricOverlayV16();
 
   function injectBiometricSettingsV16(){
+    if(window.CREDIGESTOR_MULTITENANT)return;
     if(document.getElementById('biometricSettingsV16'))return;
     const account=document.getElementById('accountSettingsV11');if(!account)return;
     const rec=biometricRecordV16();

@@ -46,6 +46,7 @@
     applySettings=function(){const out=before();titleV11();return out};
   }
 
+  if(window.CREDIGESTOR_MULTITENANT)return; // Firebase is the only account authority in v26.1.
   function getSession(){
     try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null')}catch{return null}
   }

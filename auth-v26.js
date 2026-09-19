@@ -1,53 +1,122 @@
-// CrediGestor v26 - Firebase Authentication, login Google e perfis de acesso.
 (function(){
   'use strict';
-  const cfg=window.CREDIGESTOR_FIREBASE_CONFIG||{};
-  const configured=cfg.apiKey&&cfg.projectId&&!Object.values(cfg).some(v=>String(v).includes('COLE_AQUI'));
-  const roleNames={administrador:'Administrador',gerente:'Gerente',cobrador:'Cobrador',consulta:'Consulta'};
-  let auth=null,session=null;
-
-  function removeLegacyLogin(){document.getElementById('v11LoginOverlay')?.remove();}
-  function overlay(message='',kind=''){
-    removeLegacyLogin();let el=document.getElementById('v26AuthOverlay');
-    if(!el){el=document.createElement('div');el.id='v26AuthOverlay';el.className='v26-auth-overlay';document.body.appendChild(el);}
-    el.innerHTML=`<div class="v26-auth-card"><div class="v26-auth-brand"><div class="v26-auth-logo">C</div><div><h2>CrediGestor v26</h2><p>Entre para acessar os dados da sua organização.</p></div></div>${message?`<div class="v26-auth-status ${kind}">${esc(message)}</div>`:''}<button type="button" class="primary-btn" id="v26GoogleLogin" ${configured?'':'disabled'}>Entrar com Google</button>${configured?'':'<p>O Firebase ainda não foi configurado. Preencha o arquivo <b>firebase-config.js</b> e publique novamente.</p><button type="button" class="ghost-btn" id="v26LocalMode">Continuar somente neste aparelho</button>'}<p style="font-size:11px">Seus dados atuais não são apagados. Na primeira migração, o sistema cria uma cópia de segurança antes de enviar os dados.</p></div>`;
-    const login=document.getElementById('v26GoogleLogin');if(login&&!login.disabled)login.onclick=signIn;
-    const local=document.getElementById('v26LocalMode');if(local)local.onclick=()=>{window.CrediGestorCloud.setLocalMode(true);el.remove();};
-  }
-  function hideOverlay(){document.getElementById('v26AuthOverlay')?.remove();}
-  async function signIn(){
-    try{overlay('Abrindo o login seguro do Google…');const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});await auth.signInWithPopup(provider);}
-    catch(error){console.error(error);overlay(error.code==='auth/popup-blocked'?'O navegador bloqueou a janela de login. Permita pop-ups e tente novamente.':'Não foi possível entrar com Google. Confira a configuração do Firebase e tente novamente.','error');}
-  }
-  function applyRole(){
-    document.body.dataset.v26Role=session?.role||'';
-    const b=document.getElementById('accountQuickBtn');if(b&&session){const name=session.user?.displayName||session.user?.email||'Conta';b.textContent=name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();b.title=`${name} — ${roleNames[session.role]||session.role}`;}
-  }
-  async function accountModal(){
-    if(!session){overlay();return;}
-    const s=window.CrediGestorCloud.session();const photo=s.user?.photoURL?`<img class="v26-avatar" src="${esc(s.user.photoURL)}" alt="">`:`<div class="v26-avatar">${esc((s.user?.displayName||s.user?.email||'U').slice(0,1).toUpperCase())}</div>`;
-    const admin=s.role==='administrador';
-    openModal(`<h2>Minha conta</h2><div class="card"><div class="v26-account-row">${photo}<div><b>${esc(s.user?.displayName||'Usuário')}</b><div class="muted">${esc(s.user?.email||'')}</div><span class="v26-role">${esc(roleNames[s.role]||s.role||'Modo local')}</span></div></div><div class="v26-sync">Organização: <b>${esc(s.organizationName||s.organizationId||'não conectada')}</b><br>Sincronização: ${s.connected?'ativa':'somente neste aparelho'}</div></div><div class="actions"><button type="button" class="soft-btn" id="v26BackupBtn">Baixar backup de segurança</button>${auth?'<button type="button" class="ghost-btn" id="v26LogoutBtn">Sair</button>':''}</div>${admin?'<div class="section-title"><h2>Usuários</h2><small>equipe</small></div><div class="card" id="v26Members">Carregando…</div><div class="field"><label>Convidar por e-mail</label><input id="v26InviteEmail" type="email" placeholder="nome@exemplo.com"></div><div class="field"><label>Perfil</label><select id="v26InviteRole"><option value="gerente">Gerente</option><option value="cobrador">Cobrador</option><option value="consulta">Consulta</option></select></div><div class="actions"><button type="button" class="primary-btn" id="v26InviteBtn">Criar convite</button></div>':''}` ,()=>{
-      document.getElementById('v26BackupBtn').onclick=()=>window.CrediGestorCloud.downloadSafetyBackup();
-      const logout=document.getElementById('v26LogoutBtn');if(logout)logout.onclick=()=>{closeModal();auth.signOut();};
-      if(admin){
-        window.CrediGestorCloud.listMembers().then(list=>{const box=document.getElementById('v26Members');if(box)box.innerHTML=list.map(m=>`<div class="v26-member"><div><b>${esc(m.name||m.email||'Usuário')}</b><div class="muted">${esc(m.email||'')}</div></div><span class="v26-role">${esc(roleNames[m.role]||m.role)}</span></div>`).join('')||'<div class="muted">Nenhum usuário cadastrado.</div>';});
-        document.getElementById('v26InviteBtn').onclick=async()=>{try{await window.CrediGestorCloud.createInvitation(document.getElementById('v26InviteEmail').value,document.getElementById('v26InviteRole').value);alert('Convite criado. A pessoa deve entrar no CrediGestor com esse e-mail do Google.');document.getElementById('v26InviteEmail').value='';}catch(error){alert(error.message)}};
-      }
+  document.getElementById('v261Boot')?.remove();
+  const cloud=window.CrediGestorCloud,config=window.CREDIGESTOR_FIREBASE_CONFIG||{};
+  const roles={administrador:'Administrador',gerente:'Gerente',cobrador:'Cobrador',consulta:'Consulta'};
+  const configured=['apiKey','authDomain','projectId','appId'].every(k=>typeof config[k]==='string'&&config[k]&&!/COLE_AQUI/.test(config[k]));
+  window.CREDIGESTOR_FIREBASE_READY=configured;
+  let auth=null,authGeneration=0,signingOut=false;
+  const overlay=document.createElement('div');overlay.id='v26Auth';overlay.className='v26-auth-overlay';document.body.append(overlay);
+  const banner=document.createElement('div');banner.className='v26-banner';banner.hidden=true;document.body.prepend(banner);
+  const account=document.createElement('dialog');account.id='v26Account';document.body.append(account);
+  function showLogin(message='',error=false){
+    overlay.hidden=false;overlay.style.display='grid';
+    overlay.innerHTML=`<section class="v26-auth-card"><h2>CrediGestor 26.1</h2><p>Entre para acessar somente os dados da sua organização.</p><div class="v26-auth-status ${error?'error':''}" role="status">${esc(message||'Seus dados antigos não serão importados sem sua confirmação.')}</div>${configured?'<button id="v26Google" type="button">Entrar com Google</button>':'<p>Falta configurar o Firebase. Esta tela não acessa nem altera a carteira antiga.</p>'}</section>`;
+    document.getElementById('v26Google')?.addEventListener('click',async()=>{
+      if(!auth){showLogin('A conexão não foi iniciada. Confira a internet e recarregue.',true);return;}
+      const b=document.getElementById('v26Google');b.disabled=true;
+      try{const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});await auth.signInWithPopup(provider);}
+      catch(e){showLogin(friendly(e),true);}
     });
   }
-  const accountBtn=document.getElementById('accountQuickBtn');
-  if(accountBtn)accountBtn.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();accountModal();},true);
-  window.addEventListener('credigestor:v26-session',event=>{session=event.detail;applyRole();});
-
-  if(!configured){overlay('Configuração do Firebase pendente.');return;}
-  try{if(!firebase.apps.length)firebase.initializeApp(cfg);auth=firebase.auth();auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}
-  catch(error){console.error(error);overlay('A configuração do Firebase não é válida.','error');return;}
-  overlay('Verificando sua conta…');
-  auth.onAuthStateChanged(async current=>{
-    removeLegacyLogin();
-    if(!current){window.CrediGestorCloud.disconnect();session=null;document.body.dataset.v26Role='';overlay();return;}
-    try{overlay('Carregando sua organização e sincronizando os dados…');session=await window.CrediGestorCloud.connect(current);applyRole();hideOverlay();}
-    catch(error){console.error(error);await auth.signOut();overlay(error.message||'Não foi possível abrir sua organização.','error');}
-  });
+  function friendly(e){
+    const messages={'auth/popup-blocked':'Permita a janela de login e tente novamente.','auth/popup-closed-by-user':'O login foi fechado. Tente novamente.','auth/unauthorized-domain':'Este endereço precisa ser autorizado no Firebase Authentication.','auth/operation-not-allowed':'Ative o provedor Google no Firebase Authentication.','permission-denied':'Acesso negado. Confira as regras e o seu perfil com o administrador.','unavailable':'Sem conexão com o Firebase. Nenhuma gravação foi confirmada.'};
+    return messages[e?.code]||e?.message||'Não foi possível concluir a operação.';
+  }
+  function paint(s=cloud.session()){
+    const unlocked=s.connected;
+    document.body.dataset.v26Locked=String(!unlocked);document.body.dataset.v26Role=s.role;
+    document.getElementById('app').inert=!unlocked||s.status!=='ready';
+    document.getElementById('modal').inert=!unlocked||s.status!=='ready';
+    if(['conflict','error'].includes(s.status))document.getElementById('modal').close();
+    banner.hidden=!unlocked;banner.style.display=unlocked?'flex':'none';banner.dataset.status=s.status;
+    const status={ready:'Conectado',saving:'Aguardando confirmação da nuvem — não feche esta página',conflict:'Alteração de outra sessão: seu rascunho foi preservado',error:'A gravação não foi confirmada. Abra Minha conta.'};
+    banner.innerHTML=`<span>${esc(s.organizationName)} · ${esc(roles[s.role]||'')} · ${esc(status[s.status]||'Conectando…')}${s.hasDraft&&s.status==='ready'?' · Há um rascunho para recuperar':''}</span><button type="button">Minha conta</button>`;
+    banner.querySelector('button').onclick=openAccount;
+    if(s.receiptWarnings)banner.querySelector('span').append(document.createTextNode(` · ${s.receiptWarnings} recebimento(s) divergente(s): confira Minha conta`));
+    if(unlocked){overlay.hidden=true;overlay.style.display='none';}
+    else {account.close();showLogin(s.error||'Entre com sua Conta Google.',!!s.error);if(s.status==='connecting')showLogin('Conectando à sua organização…');}
+  }
+  function message(text,error=false){const el=account.querySelector('#v26Message');if(el){el.textContent=text;el.style.color=error?'#991b1b':'#166534';}}
+  async function task(fn,success){try{await fn();message(success||'Concluído.');}catch(e){message(friendly(e),true);}}
+  function openAccount(){
+    const s=cloud.session();if(!s.connected)return;
+    account.innerHTML=`<div class="v26-actions"><button id="v26Close">Fechar</button><button id="v26Logout">Sair da conta</button></div><h2>Minha conta</h2><p>${esc(s.user.email)}<br>${esc(s.organizationName)}<br>${esc(roles[s.role])}</p><p id="v26Message" class="v26-message" role="status">${esc(s.error||'')}</p><div class="v26-actions"><button id="v26Reload">Carregar versão da nuvem</button>${s.hasDraft?'<button id="v26Draft">Baixar rascunho preservado</button>':''}</div>${['administrador','gerente','cobrador'].includes(s.role)?'<section class="v26-section"><h3>Recebimento</h3><p>Registre uma parcela. Correções e quitação total ficam com o gerente ou administrador.</p><button id="v26Receipt">Registrar parcela</button><div id="v26ReceiptForm"></div></section>':''}${s.role==='administrador'?'<section class="v26-section"><h3>Equipe</h3><label>E-mail Google do convidado<input id="v26InviteEmail" type="email"></label><label>Perfil<select id="v26InviteRole"><option value="consulta">Consulta</option><option value="cobrador">Cobrador</option><option value="gerente">Gerente</option></select></label><button id="v26Invite">Criar convite</button><p>Válido por 6 dias. O convite é reconhecido no primeiro login; não é enviado e-mail. Uma conta pertence a uma organização nesta versão.</p><button id="v26Members">Ver usuários</button><div id="v26MembersList"></div></section>':''}${s.owner&&s.role==='administrador'?'<section class="v26-section"><h3>Trazer a carteira antiga</h3><p>Somente para uma organização vazia, sem alterações. O original será mantido.</p><button id="v26Legacy">1. Baixar backup deste navegador</button><label>Ou selecione um backup JSON salvo no aparelho original<input id="v26Import" type="file" accept=".json,application/json"></label><div id="v26Migration"></div></section>':''}`;
+    if(!account.open)account.showModal();
+    if(s.receiptWarnings){const warning=document.createElement('section');warning.className='v26-section';warning.innerHTML='<h3>Recebimentos divergentes</h3><p>Há registros diferentes para a mesma parcela. Os dois foram preservados na nuvem. O total da carteira mantém o registro principal até a revisão do administrador.</p><button>Baixar as duas versões para revisão</button>';warning.querySelector('button').onclick=()=>task(()=>cloud.downloadReceiptWarnings(),'Relatório de divergências disponibilizado. Não o importe sobre a carteira.');account.append(warning);}
+    account.querySelector('#v26Close').onclick=()=>account.close();
+    account.querySelector('#v26Logout').onclick=async()=>{
+      if(cloud.session().status==='saving'){message('Aguarde a confirmação da gravação antes de sair.',true);return;}
+      signingOut=true;++authGeneration;cloud.disconnect();
+      try{await auth.signOut();}catch(e){showLogin(friendly(e),true);}finally{signingOut=false;}
+    };
+    account.querySelector('#v26Reload').onclick=()=>{if(confirm('Carregar a versão confirmada na nuvem? Seu rascunho separado será mantido para download.'))task(()=>cloud.reloadCloud(),'Versão da nuvem carregada.');};
+    account.querySelector('#v26Draft')?.addEventListener('click',()=>task(()=>cloud.downloadDraft(),'Rascunho disponibilizado para download. Ele não foi enviado à nuvem.'));
+    account.querySelector('#v26Receipt')?.addEventListener('click',receiptForm);
+    account.querySelector('#v26Invite')?.addEventListener('click',()=>task(()=>cloud.createInvitation(account.querySelector('#v26InviteEmail').value,account.querySelector('#v26InviteRole').value),'Convite criado. Peça ao convidado para entrar com esse e-mail.'));
+    account.querySelector('#v26Members')?.addEventListener('click',()=>task(showMembers,''));
+    account.querySelector('#v26Legacy')?.addEventListener('click',()=>task(()=>prepareMigration(cloud.legacyBackup()),'Backup disponibilizado. Confira o download antes de confirmar a migração.'));
+    account.querySelector('#v26Import')?.addEventListener('change',e=>task(async()=>{
+      const file=e.target.files[0];if(!file)return;if(file.size>800000)throw Error('Backup maior que o limite desta versão (800 KB). O original permanece intacto.');
+      prepareMigration(await file.text());
+    },'Backup selecionado. Mantenha esse arquivo salvo antes de continuar.'));
+  }
+  function prepareMigration(raw){
+    const data=CrediGestorCore.validate(JSON.parse(raw)),s=cloud.session();
+    account.querySelector('#v26Migration').innerHTML=`<p>${data.clients.length} clientes para <b>${esc(s.organizationName)}</b> (${esc(s.user.email)}).</p><label><span><input id="v26ConfirmBackup" type="checkbox"> Confirmei o backup salvo e esta é a organização correta.</span></label><button id="v26Migrate">2. Migrar para esta organização</button>`;
+    account.querySelector('#v26Migrate').onclick=()=>task(async()=>{
+      if(!account.querySelector('#v26ConfirmBackup').checked)throw Error('Confirme o backup e o destino primeiro.');
+      if(cloud.session().organizationId!==s.organizationId)throw Error('A conta mudou. Selecione o backup novamente.');
+      if(!confirm(`Migrar ${data.clients.length} clientes para ${s.organizationName}?`))return;
+      await cloud.migrate(raw,true);account.querySelector('#v26Migration').innerHTML='<p>Migração confirmada na nuvem. O conteúdo antigo foi preservado.</p>';
+    },'Operação concluída.');
+  }
+  async function showMembers(){
+    const members=await cloud.listMembers(),s=cloud.session(),target=account.querySelector('#v26MembersList');target.replaceChildren();
+    members.forEach(m=>{
+      const row=document.createElement('div');row.className='v26-member';
+      row.innerHTML=`<span>${esc(m.name)}<br>${esc(m.email)} · ${m.active?'ativo':'desativado'}</span>`;
+      if(m.uid!==s.user.uid){
+        const sel=document.createElement('select');Object.entries(roles).forEach(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;sel.append(o);});sel.value=m.role;
+        const b=document.createElement('button');b.textContent='Salvar perfil';b.onclick=()=>task(()=>cloud.setMember(m.uid,sel.value,m.active),'Perfil atualizado.');
+        const toggle=document.createElement('button');toggle.textContent=m.active?'Desativar':'Reativar';toggle.onclick=()=>{if(confirm(`${toggle.textContent} acesso de ${m.email}?`))task(()=>cloud.setMember(m.uid,m.role,!m.active),'Acesso atualizado.');};
+        row.append(sel,b,toggle);
+      }else row.append(document.createTextNode(' Seu acesso (não alterável aqui)'));
+      target.append(row);
+    });
+  }
+  function receiptForm(){
+    const target=account.querySelector('#v26ReceiptForm');
+    const contracts=[];state.clients.forEach(c=>(c.contracts||[]).filter(k=>k.active!==false&&!k.closed).forEach(k=>contracts.push({c,k})));
+    target.innerHTML=`<label>Cliente / contrato<select id="v26Contract">${contracts.map(({c,k},i)=>`<option value="${i}">${esc(c.name)} — ${esc(k.id)}</option>`).join('')}</select></label><label>Mês de referência<input id="v26Reference" type="month" value="${monthRef()}"></label><label>Valor recebido<input id="v26Amount" type="number" min="0.01" step="0.01"></label><label>Data<input id="v26Date" type="date" value="${todayISO()}"></label><label>Forma<select id="v26Method"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Cartão</option><option>Outro</option></select></label><label>Observação<input id="v26Note" maxlength="2000"></label><button id="v26Receive">Confirmar recebimento</button>`;
+    target.querySelector('#v26Receive').onclick=()=>task(async()=>{
+      const item=contracts[Number(target.querySelector('#v26Contract').value)];if(!item)throw Error('Nenhum contrato ativo disponível.');
+      const b=target.querySelector('#v26Receive');b.disabled=true;
+      try{await cloud.recordReceipt(item.c.id,item.k.id,{reference:target.querySelector('#v26Reference').value,amount:Number(target.querySelector('#v26Amount').value),paidAt:target.querySelector('#v26Date').value,method:target.querySelector('#v26Method').value,note:target.querySelector('#v26Note').value});target.replaceChildren();}finally{b.disabled=false;}
+    },'Recebimento confirmado na nuvem.');
+  }
+  document.getElementById('accountQuickBtn').onclick=openAccount;
+  window.addEventListener('credigestor:v26-session',e=>paint(e.detail));
+  window.addEventListener('beforeunload',e=>{if(cloud.session().hasDraft||['saving','conflict','error'].includes(cloud.session().status)){e.preventDefault();e.returnValue='';}});
+  // Intercept legacy imports: in cloud mode, restore is explicit, owner-only and empty-target only.
+  document.addEventListener('click',e=>{
+    if(cloud.session().role==='cobrador'&&e.target.closest('.v21-pay-btn,.v13-pay,.pay-btn')){e.preventDefault();e.stopImmediatePropagation();document.getElementById('modal').close();openAccount();receiptForm();return;}
+    if(e.target.closest('#importBtn')){e.preventDefault();e.stopImmediatePropagation();openAccount();message('Use Trazer a carteira antiga. A importação direta está desativada para proteger os dados.',true);}
+  },true);
+  paint();showLogin(configured?'Iniciando conexão…':'Configure o Firebase para iniciar.');
+  if(!configured)return;
+  (async()=>{
+    try{
+      if(!window.firebase)throw Error('Não foi possível carregar o Firebase. Confira a conexão e recarregue.');
+      firebase.initializeApp(config);auth=firebase.auth();
+      await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      auth.onAuthStateChanged(async user=>{
+        const token=++authGeneration;if(signingOut)return;
+        cloud.disconnect();if(!user){showLogin();return;}
+        showLogin('Conectando à sua organização…');
+        try{await cloud.connect(user);if(token!==authGeneration)return;paint();}
+        catch(e){if(token===authGeneration){cloud.disconnect();showLogin(friendly(e),true);}}
+      });
+    }catch(e){cloud.disconnect();showLogin(friendly(e),true);}
+  })();
 })();

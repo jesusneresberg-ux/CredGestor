@@ -1,6 +1,7 @@
 // CrediGestor v12 — sincronização automática entre dispositivos usando OAuth Google + Google Drive.
 (function(){
   'use strict';
+  if(window.CREDIGESTOR_MULTITENANT)return; // Never run legacy Drive sync alongside Firestore.
 
   const META_KEY='credigestor-sync-meta-v12';
   const SESSION_KEY='credigestor-google-session-v11';

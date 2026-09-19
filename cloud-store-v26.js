@@ -1,176 +1,172 @@
-// CrediGestor v26 - camada de dados multiempresa no Cloud Firestore.
 (function(){
   'use strict';
-  const LOCAL_KEY='credigestor_v1';
-  const BACKUP_PREFIX='credigestor_backup_before_v26_';
-  let db=null,user=null,workspace=null,role=null,connected=false,localMode=false;
-  let lastCloudState=null,pushTimer=null,appUnsub=null,paymentsUnsub=null,applyingRemote=false;
-
-  const copy=value=>JSON.parse(JSON.stringify(value));
-  const nowStamp=()=>firebase.firestore.FieldValue.serverTimestamp();
-  const orgRef=id=>db.collection('organizations').doc(id);
-
-  function publicSession(){
-    return {connected,localMode,user:user?{uid:user.uid,email:user.email,displayName:user.displayName,photoURL:user.photoURL}:null,organizationId:workspace?.organizationId||'',organizationName:workspace?.organizationName||'',role:role||'',lastSyncAt:workspace?.lastSyncAt||''};
+  const C=window.CrediGestorCore,LEGACY='credigestor_v1';
+  let generation=0,ctx=null,mode='locked',base=null,visible=null,events=new Map(),applied={};
+  let pending=null,timer=null,busy=false,lastError='',unsubs=[],latest=null,receiptWarnings=[];
+  const copy=C.clone,stamp=()=>firebase.firestore.FieldValue.serverTimestamp();
+  const random=()=>crypto.randomUUID();
+  function draftKey(c=ctx){return c?`credigestor_v261_draft:${c.uid}:${c.org}`:'';}
+  function storedDrafts(){
+    if(!ctx)return [];const prefix=draftKey(),keys=[];
+    for(let i=0;i<sessionStorage.length;i++){const key=sessionStorage.key(i);if(key===prefix||key.startsWith(prefix+':archive:'))keys.push(key);}
+    return keys.map(key=>sessionStorage.getItem(key)).filter(Boolean);
   }
-  function notify(){window.dispatchEvent(new CustomEvent('credigestor:v26-session',{detail:publicSession()}));}
-  function setLocalMode(value=true){localMode=!!value;connected=false;notify();}
-
-  async function ensureWorkspace(firebaseUser){
-    const userRef=db.collection('users').doc(firebaseUser.uid);
-    let snap=await userRef.get();
-    if(snap.exists){
-      const data=snap.data();
-      if(data.active===false)throw new Error('Este acesso foi desativado pelo administrador.');
-      return data;
-    }
-    const email=(firebaseUser.email||'').trim().toLowerCase();
-    const invitationRef=db.collection('invitations').doc(email);
-    const invitation= email ? await invitationRef.get() : null;
-    if(invitation?.exists && invitation.data().active!==false){
-      const invite=invitation.data();
-      const memberRef=orgRef(invite.organizationId).collection('members').doc(firebaseUser.uid);
-      const batch=db.batch();
-      batch.set(userRef,{organizationId:invite.organizationId,organizationName:invite.organizationName||'Organização',name:firebaseUser.displayName||email,email,role:invite.role||'consulta',active:true,createdAt:nowStamp()});
-      batch.set(memberRef,{uid:firebaseUser.uid,name:firebaseUser.displayName||email,email,role:invite.role||'consulta',active:true,joinedAt:nowStamp()});
-      batch.delete(invitationRef);
-      await batch.commit();
-      snap=await userRef.get();
-      return snap.data();
-    }
-    const organizationId=`org_${firebaseUser.uid}`;
-    const organizationName=`Organização de ${firebaseUser.displayName||email||'Administrador'}`;
-    const batch=db.batch();
-    batch.set(orgRef(organizationId),{name:organizationName,ownerUid:firebaseUser.uid,plan:'inicial',active:true,createdAt:nowStamp()});
-    batch.set(orgRef(organizationId).collection('members').doc(firebaseUser.uid),{uid:firebaseUser.uid,name:firebaseUser.displayName||email,email,role:'administrador',active:true,joinedAt:nowStamp()});
-    batch.set(userRef,{organizationId,organizationName,name:firebaseUser.displayName||email,email,role:'administrador',active:true,createdAt:nowStamp()});
-    await batch.commit();
-    return (await userRef.get()).data();
+  function session(){let hasDraft=false;try{hasDraft=storedDrafts().length>0;}catch(_){}return {connected:!!ctx&&['ready','saving','conflict','error'].includes(mode),localMode:mode==='local',role:ctx?.role||'',organizationId:ctx?.org||'',organizationName:ctx?.name||'',owner:!!ctx&&ctx.owner===ctx.uid,user:ctx?.user||null,status:mode,error:lastError,hasDraft,receiptWarnings:receiptWarnings.length};}
+  function notify(){window.dispatchEvent(new CustomEvent('credigestor:v26-session',{detail:session()}));}
+  function guard(c){if(ctx!==c||c.generation!==generation)throw Object.assign(Error('A conta mudou. Esta operação foi cancelada.'),{code:'cancelled'});}
+  function replace(next){
+    Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,defaultState(),copy(next));
+    applySettings();if(typeof render==='function')render();visible=copy(state);
   }
-
-  function makeMigrationBackup(){
-    const raw=localStorage.getItem(LOCAL_KEY);
-    if(!raw)return '';
-    const key=BACKUP_PREFIX+new Date().toISOString().replace(/[:.]/g,'-');
-    localStorage.setItem(key,raw);
-    localStorage.setItem('credigestor_v26_last_backup_key',key);
-    return key;
+  function preserve(next,reason='draft'){
+    if(!ctx)return;
+    // A draft never uses the legacy key and is never automatically restored or uploaded.
+    const previous=sessionStorage.getItem(draftKey());
+    if(previous&&reason==='draft'&&JSON.parse(previous).reason!=='draft')sessionStorage.setItem(draftKey()+':archive:'+random(),previous);
+    sessionStorage.setItem(draftKey(),JSON.stringify({uid:ctx.uid,organizationId:ctx.org,baseRevision:base?.revision??-1,reason,state:copy(next),savedAt:new Date().toISOString()}));
   }
-  function applyState(next,{renderApp=true}={}){
-    if(!next||typeof next!=='object')return;
-    applyingRemote=true;
-    Object.keys(state).forEach(k=>delete state[k]);
-    Object.assign(state,defaultState(),copy(next));
-    localStorage.setItem(LOCAL_KEY,JSON.stringify(state));
-    lastCloudState=copy(state);
-    applyingRemote=false;
-    applySettings();
-    if(renderApp&&typeof render==='function')render();
+  function fail(error){
+    clearTimeout(timer);timer=null;
+    if(error.code==='cancelled')return;
+    mode=error.code==='conflict'?'conflict':'error';lastError=error.message;notify();
   }
-  function strippedForCollector(value){
-    const out=copy(value);
-    (out.clients||[]).forEach(client=>(client.contracts||[]).forEach(contract=>{contract.payments=[];}));
-    return out;
+  function disconnect(){
+    ++generation;clearTimeout(timer);timer=null;
+    unsubs.forEach(fn=>fn());unsubs=[];ctx=null;pending=null;busy=false;base=null;latest=null;
+    events=new Map();applied={};receiptWarnings=[];mode='locked';lastError='';
+    document.getElementById('modal')?.close();
+    replace(defaultState());notify();
   }
-  function paymentOnlyChange(before,after){
-    if(!before)return false;
-    return JSON.stringify(strippedForCollector(before))===JSON.stringify(strippedForCollector(after));
+  function setLocalMode(){
+    if(window.CREDIGESTOR_FIREBASE_READY)throw Error('O modo local não está disponível com Firebase ativo.');
+    disconnect();const raw=localStorage.getItem(LEGACY);mode='local';replace(raw?C.validate(JSON.parse(raw)):defaultState());notify();
   }
-  function collectPaymentChanges(before,after){
-    const oldMap=new Map();
-    (before?.clients||[]).forEach(c=>(c.contracts||[]).forEach(k=>(k.payments||[]).forEach(p=>oldMap.set(`${c.id}|${k.id}|${p.id||p.reference}`,JSON.stringify(p)))));
-    const changes=[];
-    (after?.clients||[]).forEach(c=>(c.contracts||[]).forEach(k=>(k.payments||[]).forEach(p=>{
-      const key=`${c.id}|${k.id}|${p.id||p.reference}`;
-      if(oldMap.get(key)!==JSON.stringify(p))changes.push({clientId:c.id,contractId:k.id,payment:copy(p)});
-    })));
-    return changes;
+  async function ensureWorkspace(db,user,c){
+    const address=user.email.toLowerCase(),profile=db.collection('users').doc(user.uid),invRef=db.collection('invitations').doc(address);
+    await db.runTransaction(async tx=>{
+      guard(c);const existing=await tx.get(profile);guard(c);if(existing.exists)return;
+      const inv=await tx.get(invRef);guard(c);
+      const data=inv.exists?inv.data():null;
+      if(data && (data.acceptedBy||!data.active||data.expiresAt.toMillis()<=Date.now()))throw Error('Convite indisponível ou expirado. Solicite um novo acesso ao administrador.');
+      const org=data?.organizationId||`org_${user.uid}`,root=db.collection('organizations').doc(org);
+      const name=(user.displayName||address).slice(0,120),member=root.collection('members').doc(user.uid);
+      if(!data)tx.set(root,{name:`Organização de ${name}`.slice(0,120),ownerUid:user.uid,plan:'inicial',active:true,createdAt:stamp()});
+      tx.set(profile,{organizationId:org,name,email:address,createdAt:stamp()});
+      tx.set(member,{uid:user.uid,name,email:address,role:data?.role||'administrador',active:true,joinedAt:stamp()});
+      if(data)tx.update(invRef,{acceptedBy:user.uid,acceptedAt:stamp()});
+    });
+    guard(c);const p=await profile.get({source:'server'});guard(c);return p.data();
   }
-  function canSave(next){
-    if(localMode||!connected||applyingRemote)return true;
-    if(role==='administrador'||role==='gerente')return true;
-    if(role==='cobrador')return paymentOnlyChange(lastCloudState,next);
-    return false;
+  function acceptRemote(doc){
+    if(!doc || doc.schemaVersion!==261){fail(Error('Formato de nuvem incompatível. Nenhum dado local foi substituído.'));return;}
+    if(base&&doc.revision<base.revision)return;
+    latest=doc;
+    if(pending||busy||mode==='conflict'||mode==='error')return;
+    // Do not replace objects referenced by an open editing form.
+    if(document.getElementById('modal')?.open){notify();return;}
+    base=doc;const projection=C.materialize(base,events);applied=projection.appliedEvents;receiptWarnings=projection.warnings;replace(projection.state);notify();
   }
-  function rejectChange(){
-    const label=role==='consulta'?'Consulta':'Cobrador';
-    setTimeout(()=>{if(lastCloudState)applyState(lastCloudState);alert(`${label}: seu perfil não permite esta alteração.`);},0);
+  async function connect(user){
+    disconnect();if(!user.emailVerified||!user.email)throw Error('Entre com uma Conta Google com e-mail verificado.');
+    const c={generation,uid:user.uid,user:{uid:user.uid,email:user.email,displayName:user.displayName||'',photoURL:user.photoURL||''}};
+    ctx=c;mode='connecting';notify();const db=firebase.firestore();c.db=db;
+    try{
+      const profile=await ensureWorkspace(db,user,c);guard(c);c.org=profile.organizationId;
+      c.root=db.collection('organizations').doc(c.org);c.ref=c.root.collection('appData').doc('main');
+      const member=await c.root.collection('members').doc(c.uid).get({source:'server'});guard(c);
+      if(!member.exists||!member.data().active)throw Error('Acesso desativado. Fale com o administrador.');
+      c.role=member.data().role;const org=await c.root.get({source:'server'});guard(c);c.name=org.data().name;c.owner=org.data().ownerUid;
+      await db.runTransaction(async tx=>{
+        guard(c);const main=await tx.get(c.ref);guard(c);
+        if(!main.exists){if(c.role!=='administrador')throw Error('O administrador precisa abrir a organização primeiro.');
+          tx.set(c.ref,{schemaVersion:261,state:C.validate(state),revision:0,appliedEvents:{},updatedBy:c.uid,writerId:random(),updatedAt:stamp()});}
+      });
+      guard(c);const initial=await c.ref.get({source:'server'});guard(c);
+      if(initial.data().schemaVersion!==261)throw Error('A nuvem contém dados de outra versão. Faça backup e solicite migração assistida.');
+      base=initial.data();latest=base;mode='ready';acceptRemote(base);
+      // Firestore persistence is deliberately not enabled: no cross-account disk cache.
+      unsubs.push(c.ref.onSnapshot(snap=>{if(ctx!==c||snap.metadata.hasPendingWrites||!snap.exists)return;acceptRemote(snap.data());},e=>{if(ctx===c){disconnect();fail(e);}}));
+      unsubs.push(c.root.collection('paymentEvents').onSnapshot(snap=>{
+        if(ctx!==c)return;events=new Map(snap.docs.filter(d=>!d.metadata.hasPendingWrites).map(d=>[d.id,d.data()]));
+        if(!pending&&!busy&&mode==='ready')acceptRemote(latest||base);
+      },e=>{if(ctx===c){disconnect();fail(e);}}));
+      unsubs.push(c.root.collection('members').doc(c.uid).onSnapshot({includeMetadataChanges:true},async snap=>{
+        if(ctx!==c||snap.metadata.hasPendingWrites||snap.metadata.fromCache)return;
+        try{
+          // A local rejected delete may emit a missing cache snapshot. Confirm ACL changes on the server.
+          if(!snap.exists||!snap.data().active||c.role!==snap.data().role){
+            const confirmed=await c.root.collection('members').doc(c.uid).get({source:'server'});if(ctx!==c)return;
+            if(!confirmed.exists||!confirmed.data().active){disconnect();lastError='Acesso desativado pelo administrador.';notify();return;}
+            if(c.role!==confirmed.data().role){c.role=confirmed.data().role;if(pending||busy)fail(Error('Seu perfil foi alterado. Recarregue os dados.'));notify();}
+          }
+        }catch(e){if(ctx===c){disconnect();fail(e);}}
+      },e=>{if(ctx===c){disconnect();fail(e);}}));
+      notify();return session();
+    }catch(e){if(ctx===c)disconnect();throw e;}
   }
-  async function pushState(snapshot){
-    if(!connected||localMode||applyingRemote)return;
-    if(role==='cobrador'){
-      const changes=collectPaymentChanges(lastCloudState,snapshot);
-      for(const change of changes){
-        await orgRef(workspace.organizationId).collection('paymentEvents').add({...change,createdBy:user.uid,createdByName:user.displayName||user.email||'',createdAt:nowStamp()});
-      }
-      lastCloudState=copy(snapshot);workspace.lastSyncAt=new Date().toISOString();notify();return;
-    }
-    if(role!=='administrador'&&role!=='gerente')return;
-    await orgRef(workspace.organizationId).collection('appData').doc('main').set({schemaVersion:26,state:copy(snapshot),updatedBy:user.uid,updatedAt:nowStamp()});
-    lastCloudState=copy(snapshot);workspace.lastSyncAt=new Date().toISOString();notify();
+  function save(next){
+    if(mode==='local'){C.validate(next);localStorage.setItem(LEGACY,JSON.stringify(next));visible=copy(next);return true;}
+    if(!ctx||!['ready','saving'].includes(mode)||busy)throw Error('Aguarde a sincronização ou resolva o aviso em Minha conta antes de alterar dados.');
+    if(!['administrador','gerente'].includes(ctx.role))throw Error('Seu perfil não permite alterar a carteira. Cobradores registram parcelas em Minha conta.');
+    C.validate(next);
+    if(ctx.role==='gerente'&&C.stable(next.settings)!==C.stable(base.state.settings))throw Error('Somente o Administrador altera as configurações.');
+    preserve(next);pending=copy(next);mode='saving';clearTimeout(timer);
+    timer=setTimeout(()=>flush().catch(()=>{}),120);notify();return true;
   }
-  function schedulePush(next){
-    if(!connected||localMode||applyingRemote)return;
-    clearTimeout(pushTimer);
-    const snapshot=copy(next);
-    pushTimer=setTimeout(()=>pushState(snapshot).catch(error=>{console.error('[CrediGestor v26]',error);alert('A alteração ficou salva neste aparelho, mas não foi sincronizada. Verifique a internet e tente novamente.');}),650);
+  function rollback(){if(visible)replace(visible);}
+  async function flush(){
+    if(!pending||busy)return;
+    const c=ctx,desired=pending,expected=base.revision,receiptIds=copy(applied),writerId=random();
+    pending=null;busy=true;clearTimeout(timer);
+    try{
+      const revision=await C.commit(c.db,c.ref,expected,desired,receiptIds,c.uid,writerId,stamp,()=>guard(c));guard(c);
+      base={schemaVersion:261,state:copy(desired),revision,appliedEvents:receiptIds,writerId,updatedBy:c.uid};
+      sessionStorage.removeItem(draftKey(c));mode='ready';busy=false;
+      if(latest?.revision>revision)acceptRemote(latest);else {latest=base;acceptRemote(base);}notify();
+    }catch(e){if(ctx===c){busy=false;try{preserve(desired,e.code||'error');}catch(_){e.message+=' Baixe o rascunho existente antes de fechar.';}fail(e);}throw e;}
   }
-  function applyPaymentEvent(event){
-    const client=state.clients.find(x=>x.id===event.clientId);if(!client)return false;
-    const contract=(client.contracts||[]).find(x=>x.id===event.contractId);if(!contract)return false;
-    contract.payments=contract.payments||[];
-    const p=event.payment||{};const existing=contract.payments.find(x=>(p.id&&x.id===p.id)||(!p.id&&x.reference===p.reference));
-    if(existing)Object.assign(existing,p);else contract.payments.push(copy(p));
-    localStorage.setItem(LOCAL_KEY,JSON.stringify(state));lastCloudState=copy(state);return true;
+  async function reloadCloud(){
+    if(!ctx)throw Error('Entre novamente.');if(busy)throw Error('Aguarde a gravação atual.');
+    const c=ctx;clearTimeout(timer);pending=null;const snap=await c.ref.get({source:'server'});guard(c);
+    document.getElementById('modal')?.close();mode='ready';lastError='';acceptRemote(snap.data());notify();
   }
-  function subscribe(){
-    const root=orgRef(workspace.organizationId);
-    appUnsub?.();paymentsUnsub?.();
-    appUnsub=root.collection('appData').doc('main').onSnapshot(snap=>{
-      if(!snap.exists)return;const data=snap.data();
-      if(data.updatedBy===user.uid&&lastCloudState)return;
-      applyState(data.state);workspace.lastSyncAt=new Date().toISOString();notify();
-    },error=>console.error('[CrediGestor v26 snapshot]',error));
-    paymentsUnsub=root.collection('paymentEvents').onSnapshot(snap=>{
-      let changed=false;snap.docChanges().forEach(change=>{if(change.type==='added')changed=applyPaymentEvent(change.doc.data())||changed;});
-      if(changed){if(typeof render==='function')render();if(role==='administrador'||role==='gerente')schedulePush(state);}
-    },error=>console.error('[CrediGestor v26 payments]',error));
+  function download(raw,filename){const a=document.createElement('a');const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function downloadDraft(){const drafts=storedDrafts();if(!drafts.length)throw Error('Nenhum rascunho pendente nesta conta.');download(JSON.stringify({format:'credigestor-recovery-v261',drafts:drafts.map(JSON.parse)},null,2),'credigestor-rascunho-recuperacao.json');}
+  function downloadReceiptWarnings(){if(!ctx)throw Error('Entre novamente.');download(JSON.stringify({organizationId:ctx.org,divergences:receiptWarnings},null,2),'credigestor-recebimentos-divergentes.json');}
+  function legacyBackup(){const raw=localStorage.getItem(LEGACY);if(!raw)throw Error('Não há dados antigos neste navegador. Importe o backup JSON do aparelho original.');download(raw,'credigestor-backup-antes-v261.json');return raw;}
+  async function migrate(raw,confirmed){
+    const c=ctx;if(!c||c.uid!==c.owner||c.role!=='administrador')throw Error('Somente o proprietário pode migrar a carteira.');
+    if(confirmed!==true)throw Error('Confirme a organização de destino e salve o backup antes de migrar.');
+    guard(c);const source=C.validate(JSON.parse(raw));
+    // Only a deliberately selected JSON source is accepted. No automatic migration.
+    if(base.revision!==0||base.state.clients.length)throw Error('A organização já contém alterações. A migração automática foi bloqueada para preservar os dois conjuntos.');
+    const backupKey=`credigestor_v261_migration:${c.uid}:${c.org}:${random()}`;
+    localStorage.setItem(backupKey,raw); // Quota failure aborts before a cloud write.
+    save(source);await flush();guard(c);return true;
   }
-  async function connect(firebaseUser){
-    user=firebaseUser;localMode=false;db=firebase.firestore();
-    try{await db.enablePersistence({synchronizeTabs:true});}catch(error){if(error.code!=='failed-precondition'&&error.code!=='unimplemented')console.warn(error);}
-    workspace=await ensureWorkspace(firebaseUser);role=workspace.role||'consulta';
-    const mainRef=orgRef(workspace.organizationId).collection('appData').doc('main');
-    const main=await mainRef.get();
-    if(main.exists)applyState(main.data().state);
-    else if(role==='administrador'||role==='gerente'){
-      const backupKey=makeMigrationBackup();
-      await mainRef.set({schemaVersion:26,state:copy(state),migratedFromLocalStorage:!!backupKey,migrationBackupKey:backupKey,updatedBy:user.uid,updatedAt:nowStamp()});
-      lastCloudState=copy(state);
-    }else lastCloudState=copy(state);
-    connected=true;subscribe();notify();return publicSession();
+  async function createInvitation(address,newRole){
+    const c=ctx;if(!c||c.role!=='administrador')throw Error('Somente o Administrador cria convites.');
+    address=String(address).trim().toLowerCase();if(!/^[^@\s/]+@[^@\s/]+\.[^@\s/]+$/.test(address)||address.length>254)throw Error('E-mail inválido.');
+    if(!['gerente','cobrador','consulta'].includes(newRole))throw Error('Perfil inválido.');
+    await c.db.collection('invitations').doc(address).set({email:address,organizationId:c.org,organizationName:c.name,role:newRole,active:true,invitedBy:c.uid,createdAt:stamp(),expiresAt:firebase.firestore.Timestamp.fromMillis(Date.now()+6*86400000),acceptedBy:'',acceptedAt:null});guard(c);
   }
-  function disconnect(){clearTimeout(pushTimer);appUnsub?.();paymentsUnsub?.();appUnsub=null;paymentsUnsub=null;connected=false;user=null;workspace=null;role=null;notify();}
-  async function createInvitation(email,newRole){
-    if(role!=='administrador')throw new Error('Somente o Administrador pode convidar usuários.');
-    const normalized=String(email||'').trim().toLowerCase();
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized))throw new Error('Informe um e-mail válido.');
-    if(!['gerente','cobrador','consulta'].includes(newRole))throw new Error('Perfil inválido.');
-    await db.collection('invitations').doc(normalized).set({email:normalized,organizationId:workspace.organizationId,organizationName:workspace.organizationName||'',role:newRole,active:true,invitedBy:user.uid,createdAt:nowStamp()});
+  async function listMembers(){const c=ctx;if(!c||c.role!=='administrador')throw Error('Acesso restrito ao Administrador.');const result=await c.root.collection('members').get({source:'server'});guard(c);return result.docs.map(d=>d.data());}
+  async function setMember(uid,role,active){const c=ctx;if(!c||c.role!=='administrador'||uid===c.uid||uid===c.owner)throw Error('Não é permitido alterar esse usuário.');await c.root.collection('members').doc(uid).update({role,active});guard(c);}
+  async function recordReceipt(clientId,contractId,input){
+    const c=ctx;if(!c||!['administrador','gerente','cobrador'].includes(c.role))throw Error('Seu perfil não registra pagamentos.');
+    if(!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(input.reference)||!Number.isFinite(input.amount)||input.amount<=0||input.amount>1e9)throw Error('Confira referência e valor.');
+    if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(input.paidAt)||new Date(input.paidAt+'T12:00:00Z').toISOString().slice(0,10)!==input.paidAt)throw Error('Data inválida.');
+    const eventId=`${clientId}__${contractId}__${input.reference}`,ref=c.root.collection('paymentEvents').doc(eventId);
+    await c.db.runTransaction(async tx=>{
+      guard(c);const main=await tx.get(c.ref),existing=await tx.get(ref);guard(c);
+      if(existing.exists)throw Error('Esta parcela já tem um registro. Peça a correção ao gerente.');
+      const clients=main.data().state.clients,ci=clients.findIndex(x=>x.id===clientId),ki=clients[ci]?.contracts?.findIndex(x=>x.id===contractId);
+      const contract=clients[ci]?.contracts?.[ki];if(!contract||contract.active===false||contract.closed)throw Error('Contrato indisponível.');
+      if(contract.payments?.some(p=>p.reference===input.reference))throw Error('Esta parcela já foi registrada.');
+      const payment={id:eventId,reference:input.reference,amount:input.amount,paidAt:input.paidAt,method:input.method,note:input.note||'',status:'paid',type:'installment'};
+      tx.set(ref,{clientId,contractId,clientIndex:ci,contractIndex:ki,payment,createdBy:c.uid,createdAt:stamp()});
+    });guard(c);
   }
-  async function listMembers(){
-    if(!connected)return[];
-    const snap=await orgRef(workspace.organizationId).collection('members').get();return snap.docs.map(d=>({id:d.id,...d.data()}));
-  }
-  async function setMemberRole(uid,newRole){
-    if(role!=='administrador')throw new Error('Somente o Administrador pode alterar perfis.');
-    if(!['administrador','gerente','cobrador','consulta'].includes(newRole))throw new Error('Perfil inválido.');
-    const memberRef=orgRef(workspace.organizationId).collection('members').doc(uid);const member=await memberRef.get();if(!member.exists)throw new Error('Usuário não encontrado.');
-    const batch=db.batch();batch.update(memberRef,{role:newRole});batch.update(db.collection('users').doc(uid),{role:newRole});await batch.commit();
-  }
-  function downloadSafetyBackup(){
-    const key=localStorage.getItem('credigestor_v26_last_backup_key');const raw=(key&&localStorage.getItem(key))||localStorage.getItem(LOCAL_KEY);if(!raw)return false;
-    const blob=new Blob([raw],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`credigestor-backup-seguranca-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);return true;
-  }
-  window.CrediGestorCloud={connect,disconnect,setLocalMode,canSave,rejectChange,schedulePush,createInvitation,listMembers,setMemberRole,downloadSafetyBackup,session:publicSession};
+  document.getElementById('modal')?.addEventListener('close',()=>{if(ctx&&mode==='ready'&&latest)acceptRemote(latest);});
+  window.CrediGestorCloud={connect,disconnect,setLocalMode,session,save,rollback,flush,reloadCloud,downloadDraft,downloadReceiptWarnings,legacyBackup,migrate,createInvitation,listMembers,setMember,recordReceipt};
 })();

@@ -44,19 +44,21 @@ function defaultState(){
   };
 }
 function loadState(){
+  if(window.CREDIGESTOR_MULTITENANT)return defaultState();
   try{
     const raw=localStorage.getItem(DB_KEY);
     return raw ? {...defaultState(),...JSON.parse(raw)} : defaultState();
   }catch(e){ return defaultState(); }
 }
 function saveState(){
-  if(window.CrediGestorCloud && !window.CrediGestorCloud.canSave(state)){
-    window.CrediGestorCloud.rejectChange();
-    return false;
+  if(window.CREDIGESTOR_MULTITENANT){
+    try{
+      if(!window.CrediGestorCloud)throw Error('Aguarde a conexão com sua conta.');
+      window.CrediGestorCloud.save(state);applySettings();return true;
+    }catch(error){window.CrediGestorCloud?.rollback();alert(error.message);throw error;}
   }
   localStorage.setItem(DB_KEY, JSON.stringify(state));
   applySettings();
-  if(window.CrediGestorCloud)window.CrediGestorCloud.schedulePush(state);
   return true;
 }
 function uid(prefix='id'){ return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); }
