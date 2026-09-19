@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function memberPath(orgId) { return /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid); }
+    function member(orgId) { return get(memberPath(orgId)); }
+    function activeMember(orgId) { return signedIn() && exists(memberPath(orgId)) && member(orgId).data.active == true; }
+    function role(orgId) { return member(orgId).data.role; }
+    function admin(orgId) { return activeMember(orgId) && role(orgId) == 'administrador'; }
+    function manager(orgId) { return activeMember(orgId) && role(orgId) in ['administrador', 'gerente']; }
+    function collector(orgId) { return activeMember(orgId) && role(orgId) in ['administrador', 'gerente', 'cobrador']; }
+    function invitePath() { return /databases/$(database)/documents/invitations/$(request.auth.token.email); }
+    function validInvite(orgId) {
+      return signedIn() && request.auth.token.email != null && exists(invitePath()) &&
+        get(invitePath()).data.organizationId == orgId && get(invitePath()).data.active == true;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.email == request.auth.token.email &&
+        ((request.resource.data.organizationId == 'org_' + request.auth.uid && request.resource.data.role == 'administrador') ||
+         validInvite(request.resource.data.organizationId));
+      allow update: if signedIn() && ((request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
+        admin(resource.data.organizationId));
+      allow delete: if false;
+    }
+
+    match /invitations/{email} {
+      allow get: if signedIn() && resource.data.email == request.auth.token.email;
+      allow list: if false;
+      allow create, update: if signedIn() && admin(request.resource.data.organizationId);
+      allow delete: if signedIn() && (resource.data.email == request.auth.token.email || admin(resource.data.organizationId));
+    }
+
+    match /organizations/{orgId} {
+      allow create: if signedIn() && orgId == 'org_' + request.auth.uid && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if activeMember(orgId);
+      allow update, delete: if admin(orgId);
+
+      match /members/{uid} {
+        allow read: if activeMember(orgId);
+        allow create: if signedIn() && ((request.auth.uid == uid &&
+          ((orgId == 'org_' + request.auth.uid && request.resource.data.role == 'administrador') || validInvite(orgId))) || admin(orgId));
+        allow update: if admin(orgId);
+        allow delete: if admin(orgId) && uid != request.auth.uid;
+      }
+
+      match /appData/{document} {
+        allow read: if activeMember(orgId);
+        allow create, update: if manager(orgId);
+        allow delete: if admin(orgId);
+      }
+
+      match /paymentEvents/{eventId} {
+        allow read: if activeMember(orgId);
+        allow create: if collector(orgId) && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if manager(orgId);
+      }
+    }
+  }
+}

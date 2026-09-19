@@ -50,8 +50,14 @@ function loadState(){
   }catch(e){ return defaultState(); }
 }
 function saveState(){
+  if(window.CrediGestorCloud && !window.CrediGestorCloud.canSave(state)){
+    window.CrediGestorCloud.rejectChange();
+    return false;
+  }
   localStorage.setItem(DB_KEY, JSON.stringify(state));
   applySettings();
+  if(window.CrediGestorCloud)window.CrediGestorCloud.schedulePush(state);
+  return true;
 }
 function uid(prefix='id'){ return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); }
 function brl(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }

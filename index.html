@@ -8,6 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css?v=25" />
   <link rel="stylesheet" href="enhancements.css?v=25" />
+  <link rel="stylesheet" href="styles-v26.css?v=26" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -39,6 +40,10 @@
   </dialog>
 
   <input id="importInput" type="file" accept=".json,.csv,application/json,text/csv" hidden />
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js?v=26"></script>
   <script src="app.js?v=25"></script>
   <script src="enhancements.js?v=25"></script>
   <script src="backup-csv.js?v=25"></script>
@@ -53,7 +58,6 @@
   <script src="features-v13.js?v=25"></script>
   <script src="features-v15.js?v=25"></script>
   <script src="features-v16.js?v=25"></script>
-  <script src="features-v17.js?v=25"></script>
   <script src="features-v18.js?v=25"></script>
   <script src="features-v19.js?v=25"></script>
   <script src="features-v20.js?v=25"></script>
@@ -62,5 +66,7 @@
   <script src="features-v23.js?v=25"></script>
   <script src="features-v24.js?v=25"></script>
   <script src="features-v25.js?v=25"></script>
+  <script src="cloud-store-v26.js?v=26"></script>
+  <script src="auth-v26.js?v=26"></script>
 </body>
 </html>
