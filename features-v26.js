@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='26.1';
+  const VERSION='26.1.1';
   let chargeTabV26='today';
   let renderedDayV26=dateKeyV26(new Date());
 

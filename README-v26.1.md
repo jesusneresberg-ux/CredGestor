@@ -1,4 +1,4 @@
-# CrediGestor 26.1
+# CrediGestor 26.1.1
 
 As abas de cobranças e o cadastro de empréstimos já existiam na versão 26. Esta atualização corrige o funcionamento sem duplicar módulos.
 
@@ -8,6 +8,7 @@ As abas de cobranças e o cadastro de empréstimos já existiam na versão 26. E
 - O selo Em dia considera todas as cobranças vencidas e de hoje. Empréstimos quitados também mostram o selo quando o cliente não possui outra pendência. Apenas encerrar um contrato não equivale a quitá-lo.
 - O assistente de cobrança existente volta a aparecer nas abas, respeitando sua configuração.
 - A chave de armazenamento continua sendo `credigestor_v1`.
+- O cache PWA reconhece os arquivos com sufixo de versão na reabertura offline e armazena apenas respostas bem-sucedidas do próprio aplicativo.
 
 ## Verificação
 

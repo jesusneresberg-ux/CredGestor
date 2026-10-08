@@ -1,11 +1,17 @@
-const CACHE='credigestor-v26.1';
+const CACHE='credigestor-v26.1.1';
 const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./features-v8.js','./features-v10.js','./features-v11.js','./features-v12.js','./features-v13.js','./features-v15.js','./features-v16.js','./features-v17.js','./features-v18.js','./features-v19.js','./features-v20.js','./features-v21.js','./features-v22.js','./features-v23.js','./features-v24.js','./features-v25.js','./features-v26.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([
   self.clients.claim(),
   caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
 ])));
-self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request))));
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;
+  e.respondWith(fetch(e.request).then(r=>{
+    if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,copy)))}
+    return r;
+  }).catch(()=>caches.open(CACHE).then(c=>c.match(e.request,{ignoreSearch:true}))));
+});
 
 self.addEventListener('message',event=>{
   const d=event.data||{};if(d.type!=='SHOW_CHARGE_NOTIFICATION')return;

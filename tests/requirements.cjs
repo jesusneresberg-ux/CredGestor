@@ -73,6 +73,20 @@ const clients = [
       assert.match(await page.locator('.v26-charge-summary').innerText(),/09\/10\/2026/);
     });
     await check('Sem erros JavaScript',async()=>assert.deepEqual(errors,[]));
+    await check('PWA instala cache atual e reabre offline com arquivos versionados',async()=>{
+      const offlineContext=await browser.newContext();
+      try{
+        await offlineContext.route('https://accounts.google.com/**',r=>r.abort());
+        const offlinePage=await offlineContext.newPage();
+        await offlinePage.goto(process.env.BASE_URL||`http://127.0.0.1:${server.address().port}`);
+        await offlinePage.evaluate(()=>navigator.serviceWorker.ready);
+        await offlinePage.waitForFunction(()=>navigator.serviceWorker.controller);
+        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v26.1.1')));
+        await offlineContext.setOffline(true);await offlinePage.reload();
+        assert.equal(await offlinePage.evaluate(()=>window.__credigestorV26.version),'26.1.1');
+        await offlinePage.locator('[data-view="charges"]').click();assert.equal(await offlinePage.locator('[data-v26-tab]').count(),3);
+      } finally {await offlineContext.close();}
+    });
     console.log(JSON.stringify({results,errors},null,2));
     if(results.some(r=>!r.passed))process.exitCode=1;
   } finally {await browser.close();server.close();}
