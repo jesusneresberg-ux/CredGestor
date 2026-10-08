@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='26.1.1';
+  const VERSION='27.0';
   let chargeTabV26='today';
   let renderedDayV26=dateKeyV26(new Date());
 
@@ -54,13 +54,7 @@
     return (state?.clients||[]).flatMap(cl=>(cl?.contracts||[]).filter(k=>k?.active!==false).map(k=>({cl,k})));
   }
   function paymentTotalV26(k,ref){
-    const shortRef=String(ref).slice(5);
-    return (k?.payments||[]).reduce((sum,p)=>{
-      const pr=String(p?.reference||p?.ref||'');
-      const paidAt=String(p?.paidAt||p?.date||'');
-      const same=pr===ref||pr===shortRef||(!pr&&paidAt.slice(0,7)===ref);
-      return same?sum+Math.max(0,Number(p?.amount)||0):sum;
-    },0);
+    return paymentTotalForMonth(k,ref);
   }
   function obligationV26(cl,k,year,monthIndex){
     let x=null;

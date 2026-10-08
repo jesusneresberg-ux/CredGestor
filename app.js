@@ -77,6 +77,13 @@ function monthlyDue(c){
 function clientBalance(cl){ return (cl.contracts||[]).filter(c=>c.active!==false).reduce((t,c)=>t+contractBalance(c),0); }
 function clientMonthlyDue(cl){ return (cl.contracts||[]).filter(c=>c.active!==false).reduce((t,c)=>t+monthlyDue(c),0); }
 function getPayment(c,ref){ return (c.payments||[]).find(p=>p.reference===ref); }
+function paymentTotalForMonth(c,ref){
+  return (c.payments||[]).reduce((cents,p)=>{
+    const pr=String(p.reference||p.ref||''),date=String(p.paidAt||p.date||'');
+    const same=pr===ref||pr===String(ref).slice(5)||(!pr&&date.slice(0,7)===ref);
+    return cents+(same?Math.max(0,Math.round((Number(p.amount)||0)*100)):0);
+  },0)/100;
+}
 function activeContracts(){
   return state.clients.flatMap(cl=>(cl.contracts||[]).filter(c=>c.active!==false).map(c=>({cl,c})));
 }
@@ -104,8 +111,9 @@ function chargeFor(cl,c,year,monthIndex){
   const amount=beforeFirst&&!payment?0:monthlyDue(c);
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
-  let status=payment?'paid':(beforeFirst?'not_due':(d0<now?'late':'open'));
-  return {cl,c,ref,due,payment,amount,status,firstDue};
+  const paid=paymentTotalForMonth(c,ref),remaining=Math.max(0,Math.round((amount-paid)*100))/100;
+  let status=beforeFirst?'not_due':(remaining===0?'paid':(d0<now?'late':'open'));
+  return {cl,c,ref,due,payment,amount,paid,remaining,status,firstDue};
 }
 function allChargesAround(){
   const now=new Date(), arr=[];
@@ -162,9 +170,9 @@ function renderDashboard(){
     const n=new Date(); return chargeFor(cl,c,n.getFullYear(),n.getMonth());
   });
   const portfolio=state.clients.reduce((t,c)=>t+clientBalance(c),0);
-  const toReceive=monthCharges.filter(x=>x.status!=='paid').reduce((t,x)=>t+x.amount,0);
-  const received=monthCharges.filter(x=>x.status==='paid').reduce((t,x)=>t+Number(x.payment.amount||x.amount),0);
-  const late=monthCharges.filter(x=>x.status==='late').reduce((t,x)=>t+x.amount,0);
+  const toReceive=monthCharges.filter(x=>x.status!=='not_due').reduce((t,x)=>t+x.remaining,0);
+  const received=monthCharges.reduce((t,x)=>t+x.paid,0);
+  const late=monthCharges.filter(x=>x.status==='late').reduce((t,x)=>t+x.remaining,0);
   const dueSoon=allChargesAround().filter(x=>x.status!=='paid' && x.due>=new Date(Date.now()-86400000)).slice(0,5);
   const goal=Number(state.goals.monthlyReceipt)||0;
   const goalPct=goal?Math.min(100,(received/goal)*100):0;

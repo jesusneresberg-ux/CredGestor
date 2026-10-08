@@ -38,9 +38,9 @@ const clients = [
     await check('Registrar pagamento abre parcela na referência correta e remove cobrança liquidada',async()=>{
       await page.locator('.v26-pay').click();await page.locator('#v21Parcel').click();
       assert.equal(await page.locator('#v21Ref').inputValue(),'2026-10');
-      await page.locator('#v21Amount').fill('100');await page.locator('#v21ConfirmParcel').click();
+      assert.equal(await page.locator('#v21Amount').inputValue(),'60.00');await page.locator('#v21ConfirmParcel').click();
       assert.equal(await page.locator('.v26-charge-card').count(),0);
-      assert.equal(await page.evaluate(()=>state.clients.find(c=>c.id==='today').contracts[0].payments[0].amount),100);
+      assert.equal(await page.evaluate(()=>paymentTotalForMonth(state.clients.find(c=>c.id==='today').contracts[0],'2026-10')),100);
     });
     await page.locator('[data-v26-tab="late"]').click();
     await check('Atrasados inclui janeiro e fevereiro anteriores à janela de dois meses',async()=>{assert.equal(await page.locator('.v26-charge-card').count(),2);assert.match(await page.locator('.v26-charge-card').first().innerText(),/2026-01/);});
@@ -81,9 +81,9 @@ const clients = [
         await offlinePage.goto(process.env.BASE_URL||`http://127.0.0.1:${server.address().port}`);
         await offlinePage.evaluate(()=>navigator.serviceWorker.ready);
         await offlinePage.waitForFunction(()=>navigator.serviceWorker.controller);
-        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v26.1.1')));
+        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v27')));
         await offlineContext.setOffline(true);await offlinePage.reload();
-        assert.equal(await offlinePage.evaluate(()=>window.__credigestorV26.version),'26.1.1');
+        assert.equal(await offlinePage.evaluate(()=>window.__credigestorV26.version),'27.0');
         await offlinePage.locator('[data-view="charges"]').click();assert.equal(await offlinePage.locator('[data-v26-tab]').count(),3);
       } finally {await offlineContext.close();}
     });
