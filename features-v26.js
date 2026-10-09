@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='27.0';
+  const VERSION='26.0';
   let chargeTabV26='today';
   let renderedDayV26=dateKeyV26(new Date());
 
@@ -54,7 +54,14 @@
     return (state?.clients||[]).flatMap(cl=>(cl?.contracts||[]).filter(k=>k?.active!==false).map(k=>({cl,k})));
   }
   function paymentTotalV26(k,ref){
-    return paymentTotalForMonth(k,ref);
+    if(window.CrediGestorPaymentsV27?.paid)return window.CrediGestorPaymentsV27.paid(k,ref);
+    const shortRef=String(ref).slice(5);
+    return (k?.payments||[]).reduce((sum,p)=>{
+      const pr=String(p?.reference||p?.ref||'');
+      const paidAt=String(p?.paidAt||p?.date||'');
+      const same=pr===ref||pr===shortRef||(!pr&&paidAt.slice(0,7)===ref);
+      return same?sum+Math.max(0,Number(p?.amount)||0):sum;
+    },0);
   }
   function obligationV26(cl,k,year,monthIndex){
     let x=null;
@@ -83,18 +90,13 @@
     const future=[];
     const seen=new Set();
 
-    const currentMonth=now.getFullYear()*12+now.getMonth();
-    activeLoansV26().forEach(({cl,k})=>{
-      const first=firstPaymentDate(k);
-      // Sem data de início, preserva a janela histórica legada.
-      const firstMonth=first?first.getFullYear()*12+first.getMonth():currentMonth-2;
-      const lastMonth=Math.max(currentMonth+2,firstMonth+1);
-      for(let month=firstMonth;month<=lastMonth;month++){
-        const d=new Date(Math.floor(month/12),month%12,1,12,0,0,0);
+    for(let off=-2;off<=2;off++){
+      const d=new Date(now.getFullYear(),now.getMonth()+off,1,12,0,0,0);
+      activeLoansV26().forEach(({cl,k})=>{
         const item=obligationV26(cl,k,d.getFullYear(),d.getMonth());
-        if(!item)continue;
+        if(!item)return;
         const key=`${cl.id}|${k.id}|${item.ref}`;
-        if(seen.has(key))continue;
+        if(seen.has(key))return;
         seen.add(key);
 
         const dk=dateKeyV26(item.due);
@@ -102,8 +104,8 @@
         if(dk<today)groups.late.push(item);
         else if(dk===today)groups.today.push(item);
         else future.push(item);
-      }
-    });
+      });
+    }
 
     future.sort((a,b)=>a.due-b.due||String(a.cl?.name||'').localeCompare(String(b.cl?.name||''),'pt-BR'));
     const nextSeen=new Set();
@@ -160,7 +162,7 @@
   }
   function chargeCardV26(x){
     const initials=String(x.cl?.name||'C').trim().slice(0,2).toUpperCase();
-    const assistant=typeof window.openCollectionAssistantV22==='function'&&state.settings.collectionAssistant22?.enabled!==false
+    const assistant=hiddenAssistantV26(x.cl.id,x.k.id,x.ref)
       ? `<button type="button" class="small-btn v26-assistant" data-c="${escV26(x.cl.id)}" data-k="${escV26(x.k.id)}" data-r="${escV26(x.ref)}">🤖 Assistente WhatsApp</button>`
       : '';
     return `<article class="list-item v26-charge-card">
@@ -215,7 +217,6 @@
     view.querySelectorAll('.v26-assistant').forEach(b=>b.onclick=()=>{
       const hidden=hiddenAssistantV26(b.dataset.c,b.dataset.k,b.dataset.r);
       if(hidden)hidden.click();
-      else window.openCollectionAssistantV22(b.dataset.c,b.dataset.k,b.dataset.r);
     });
   }
 
@@ -227,6 +228,10 @@
     };
   }
 
+  function clientHasDueProblemV26(cl){
+    const groups=buildChargeGroupsV26();
+    return groups.late.some(x=>x.cl.id===cl.id)||groups.today.some(x=>x.cl.id===cl.id);
+  }
   function decorateLoansV26(){
     const view=document.getElementById('view');
     if(!view)return;
@@ -243,8 +248,6 @@
       titleRow.appendChild(b);
     }
 
-    const groups=buildChargeGroupsV26();
-    const dueClients=new Set([...groups.late,...groups.today].map(x=>x.cl.id));
     view.querySelectorAll('.loan-card').forEach(card=>{
       const ref=card.querySelector('.edit-loan2');
       if(!ref)return;
@@ -252,13 +255,12 @@
       const k=(cl?.contracts||[]).find(x=>x.id===ref.dataset.loan);
       if(!cl||!k)return;
 
-      const info=card.querySelector('.v10-loan-client')||card.querySelector('.loan-main-row .muted');
+      const info=card.querySelector('.loan-main-row .muted');
       if(info&&!info.querySelector('.v26-client-link')){
-        info.innerHTML=`<button type="button" class="v26-client-link" data-v26-client="${escV26(cl.id)}">${escV26(cl.name)}</button>${!info.classList.contains('v10-loan-client')&&cl.cpf?` <span>• CPF ${escV26(cl.cpf)}</span>`:''}`;
+        info.innerHTML=`<button type="button" class="v26-client-link" data-v26-client="${escV26(cl.id)}">${escV26(cl.name)}</button>${cl.cpf?` <span>• CPF ${escV26(cl.cpf)}</span>`:''}`;
       }
 
-      const settled=k.active===false&&(k.status==='paid'||k.loanStatus==='paid');
-      if((k.active!==false||settled)&&!dueClients.has(cl.id)&&!card.querySelector('.v26-current-badge')){
+      if(k.active!==false&&!clientHasDueProblemV26(cl)&&!card.querySelector('.v26-current-badge')){
         const top=card.querySelector('.row.space');
         const status=top?.querySelector('.status');
         if(top){

@@ -1,0 +1,40 @@
+CREDIGESTOR v27 — Baixas integradas a comprovantes (08/10/2026)
+
+ATUALIZAÇÃO SOBRE V26
+Substituir no diretório publicado estes arquivos:
+  index.html
+  sw.js
+  features-v26.js
+Adicionar:
+  features-v27.js
+Não apagar os demais arquivos nem limpar dados do navegador.
+Se o aplicativo estiver instalado como PWA, atualizar a página com conexão à internet
+para carregar o novo service worker (cache credigestor-v27).
+
+MUDANÇAS
+1. Botão global "Receber / Comprovante" acessível de qualquer aba.
+2. Atalhos nos empréstimos, nas fichas dos clientes e nos detalhes.
+3. Botões legados de cobrança direcionados para a baixa centralizada.
+4. No recebimento confirmado, salva-se o pagamento ANTES de abrir o WhatsApp.
+5. Pagamentos parciais são preservados como registros independentes e somados.
+6. A competência passa para "Pago" somente quando a soma chega ao valor devido;
+   antes, permanece pendente/parcial; se vencida, continua em atraso.
+7. Reenviar comprovantes cadastrados não gera recebimentos duplicados.
+8. Resumo do contrato não serve como comprovante de pagamento e não baixa valores.
+9. Tela "Conferir comprovantes antigos" para corrigir competência de lançamentos,
+   sem duplicar a receita, ou cadastrar pagamentos antigos após verificação.
+
+IMPORTANTE
+- O WhatsApp não informa ao site se a mensagem foi de fato enviada/entregue.
+  A baixa financeira depende da confirmação do recebimento dentro do CrediGestor.
+- Não há como recuperar automaticamente comprovantes de conversas antigas do
+  WhatsApp que não tenham lançamento correspondente no aplicativo.
+- Antes de conciliar registros antigos, exportar/guardar uma cópia dos dados.
+- Esta atualização NÃO rebaixa automaticamente valores sem pagamento registrado;
+  isso poderia criar baixas financeiras indevidas.
+- A conta GitHub conectada não autorizou acesso a repositórios nesta sessão.
+  Publicação e atualização online ainda requerem disponibilizar o repositório.
+
+TESTES EFETUADOS
+Node.js: baixa parcial, quitação, prevenção de duplicidade por operationId,
+reenvio sem novo pagamento, validação de referência e legado sem competência.
