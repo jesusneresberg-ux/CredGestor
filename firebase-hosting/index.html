@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>CrediGestor</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="enhancements.css?v=25" />
+  <link rel="stylesheet" href="styles-v26.css?v=261" />
+<link rel="stylesheet" href="display-v27.css"><link rel="stylesheet" href="fixed-pages.css?v=29"></head>
+<body data-v26-locked="true">
+  <p id="v261Boot">Preparando o acesso seguro ao CrediGestor… Se esta mensagem permanecer, confira a conexão e recarregue. Seus dados antigos não foram alterados.</p>
+  <noscript>Ative o JavaScript para usar o CrediGestor.</noscript>
+  <div style="display:none" id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">GESTÃO DE CRÉDITO</div>
+        <h1 id="appTitle">CrediGestor</h1>
+      </div>
+      <div class="topbar-actions"><button id="accountQuickBtn" class="icon-btn" title="Conta">👤</button><button id="themeQuickBtn" class="icon-btn" title="Trocar tema">◐</button></div>
+    </header>
+
+    <main id="view" class="view"></main>
+
+    <nav class="bottom-nav bottom-nav-v2" aria-label="Navegação principal">
+      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><small>Dashboard</small></button>
+      <button data-view="clients" class="nav-btn"><span>👥</span><small>Clientes</small></button>
+      <button data-view="loans" class="nav-btn"><span>💰</span><small>Empréstimos</small></button>
+      <button data-view="charges" class="nav-btn"><span>✓</span><small>Cobranças</small></button>
+      <button data-view="crm" class="nav-btn"><span>☷</span><small>CRM</small></button>
+      <button data-view="settings" id="settingsNavBtn" class="nav-btn"><span>⚙</span><small>Config.</small></button>
+    </nav>
+  </div>
+
+  <dialog id="modal" class="modal">
+    <form method="dialog" class="modal-card" id="modalCard">
+      <button class="modal-close" value="cancel" aria-label="Fechar">×</button>
+      <div id="modalContent"></div>
+    </form>
+  </dialog>
+
+  <input id="importInput" type="file" accept=".json,.csv,application/json,text/csv" hidden />
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=individual-partial1"></script>
+<script src="v26-core.js?v=individual-partial1"></script>
+<script>window.CREDIGESTOR_PERSONAL_SCRIPTS=["app.js","enhancements.js","backup-csv.js","features-v5.js","features-v6.js","features-v7.js","features-v8.js","features-v10.js","features-v11.js","features-v12.js","features-v13.js","features-v15.js","features-v16.js","features-v18.js","features-v19.js","features-v20.js","features-v21.js","features-v22.js","features-v23.js","features-v24.js","features-v25.js","features-simulator.js","renegotiate.js","contract-date.js"];</script>
+<script src="personal-login.js?v=individual-partial1"></script>
+</body>
+</html>
+
+
+

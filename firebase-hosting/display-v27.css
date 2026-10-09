@@ -1,0 +1,14 @@
+.charge-choice-v27{border:1px solid var(--line);border-radius:20px;padding:24px;width:min(360px,calc(100% - 32px));background:var(--surface-solid,#fff);color:var(--text,#0f172a)}
+.charge-choice-v27::backdrop{background:rgba(15,23,42,.55)}
+.charge-choice-v27 button{display:block;width:100%;padding:14px;margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-solid,#fff);color:var(--text,#0f172a);cursor:pointer;text-align:left;font:inherit;transition:background-color .2s ease,color .2s ease,border-color .2s ease}
+.charge-choice-v27 button:hover{background:color-mix(in srgb,var(--surface-solid) 90%,var(--accent) 10%);border-color:var(--accent)}
+.charge-choice-v27 button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.charge-choice-v27 button{transition:none}}
+#fullscreenBtn{font-size:13px;width:auto;padding:8px;white-space:nowrap}
+.expanded-v27 body{padding:0}
+.expanded-v27 .app-shell{max-width:none;width:100%;border-radius:0;min-height:100dvh}
+.expanded-v27 .bottom-nav{width:100%;bottom:0;border-radius:0}
+.expanded-v27 .topbar{border-radius:0}
+.expanded-v27 .view{max-width:1400px;margin:auto}
+.expanded-v27 .topbar-actions{flex-wrap:wrap}
+@media(min-width:900px){.expanded-v27 .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}}

@@ -1,0 +1,1 @@
+window.CREDIGESTOR_DOMINUS_ENDPOINT = 'https://central-agentes-whatsapp.jesusneresberg.workers.dev';

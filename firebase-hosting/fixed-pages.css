@@ -1,0 +1,13 @@
+/* Keep every app page flush with the viewport instead of a floating card. */
+body{padding:0!important}
+body .app-shell{border-radius:0!important;box-shadow:none!important;min-height:100dvh}
+body .topbar{border-radius:0!important}
+body dialog[open]{position:fixed!important;inset:0!important;margin:0!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;box-sizing:border-box!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--surface-solid,#fff);color:var(--text,#0f172a);overflow:auto!important;padding:24px 18px calc(24px + env(safe-area-inset-bottom))!important;transform:none!important;animation:none!important}
+body dialog.modal[open]{padding:0!important;background:var(--surface-solid,#fff)!important}
+body .modal-card{position:relative!important;inset:auto!important;min-height:100dvh!important;max-height:none!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;padding-top:62px!important}
+body dialog::backdrop{background:var(--surface-solid,#fff)!important;backdrop-filter:none!important}
+body .bottom-nav{left:50%!important;right:auto!important;top:auto!important;bottom:0!important;transform:translateX(-50%)!important;width:min(100%,var(--v10-app-max,520px))!important;display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;border-radius:0!important;box-shadow:none!important}
+.expanded-v27 body .bottom-nav{width:100%!important}
+body .fab{position:static!important;display:block;margin:16px 0 0 auto;box-shadow:none!important}
+body .v26-auth-overlay{background:var(--surface-solid,#fff)!important;backdrop-filter:none!important}
+body .v26-auth-card{box-shadow:none!important;border-radius:0!important}

@@ -1,0 +1,49 @@
+.v26-auth-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.76);backdrop-filter:blur(16px)}
+html[data-color-mode="dark"]{--surface:rgba(30,41,59,.95);--surface-solid:#1e293b;--text:#f1f5f9;--muted:#cbd5e1;--line:rgba(203,213,225,.2);--bg:#0f172a;--shadow:0 12px 35px rgba(0,0,0,.3);color-scheme:dark}
+html[data-color-mode="dark"] .topbar{background:linear-gradient(180deg,#0f172af5,#0f172ab0,transparent)}
+html[data-color-mode="dark"] input,html[data-color-mode="dark"] select,html[data-color-mode="dark"] textarea{background:#182337;color:#f1f5f9;border-color:#475569}
+html[data-color-mode="dark"] .bottom-nav,html[data-color-mode="dark"] dialog{background:#1e293b;color:#f1f5f9}
+html[data-color-mode="dark"] #v26Account{background:#1e293b;color:#f1f5f9}
+html[data-color-mode="dark"] #v26Account button{background:#334155;color:#f1f5f9}
+.v26-auth-card{width:min(430px,100%);background:#fff;color:#0f172a;border-radius:26px;padding:24px;box-shadow:0 28px 90px rgba(0,0,0,.4)}
+.v26-auth-brand{display:flex;align-items:center;gap:13px;margin-bottom:18px}
+.v26-auth-logo{width:52px;height:52px;border-radius:17px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:24px;background:linear-gradient(135deg,#2563eb,#4f46e5)}
+.v26-auth-card h2{margin:0;font-size:22px}.v26-auth-card p{color:#64748b;line-height:1.5}.v26-auth-card button{width:100%;margin-top:9px}
+.v26-auth-status{margin:14px 0;padding:11px 13px;border-radius:13px;background:#eff6ff;color:#1e40af;font-size:13px}.v26-auth-status.error{background:#fef2f2;color:#991b1b}
+.v26-account-row{display:flex;align-items:center;gap:12px}.v26-avatar{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#e2e8f0;display:grid;place-items:center;font-weight:800}
+.v26-role{display:inline-flex;padding:4px 9px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:800}.v26-sync{font-size:12px;color:#64748b;margin-top:8px}
+.v26-member{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #e2e8f0}.v26-member:first-child{border-top:0}
+body[data-v26-locked="true"] #app{display:none!important}
+.v26-banner{position:sticky;top:0;z-index:999;background:#eff6ff;color:#1e3a8a;padding:10px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.v26-banner button{border:1px solid #93c5fd;border-radius:8px;padding:6px 12px;cursor:pointer;background:white;color:#1e3a8a}
+.v26-banner[data-status="error"],.v26-banner[data-status="conflict"]{background:#fff1f2;color:#991b1b}
+#v26Account{width:min(720px,94vw);max-height:90vh;border:0;border-radius:18px;padding:24px;color:#0f172a;background:white}
+#v26Account::backdrop{background:rgba(15,23,42,.65)}
+#v26Account button,#v26Account input,#v26Account select{font:inherit;padding:9px;border-radius:8px;border:1px solid #cbd5e1}
+#v26Account button{cursor:pointer;background:#eff6ff}#v26Account label{display:grid;gap:5px;margin:12px 0}
+#v26Account .v26-section{margin-top:20px;padding-top:16px;border-top:1px solid #cbd5e1}
+#v26Account .v26-message{white-space:pre-wrap;line-height:1.5}#v26Account .v26-actions{display:flex;gap:8px;flex-wrap:wrap}
+#v26Account .v26-member{align-items:flex-start;flex-wrap:wrap}
+
+html[data-color-mode="dark"]{--danger:#fda4af;--success:#86efac;--warning:#fcd34d}
+html[data-color-mode="dark"] .small-btn,html[data-color-mode="dark"] .soft-btn,html[data-color-mode="dark"] .loupe-btn-v5,html[data-color-mode="dark"] .modal-close{background:#334155;color:#f1f5f9;border-color:#64748b}
+html[data-color-mode="dark"] .finder-person-v5,html[data-color-mode="dark"] .contract-card,html[data-color-mode="dark"] .panel-card,html[data-color-mode="dark"] .tab,html[data-color-mode="dark"] .sim-result{background:#243247;color:#f1f5f9;border-color:#475569}
+html[data-color-mode="dark"] .tab.active{background:#475569;color:#fff}
+html[data-color-mode="dark"] .rule-note,html[data-color-mode="dark"] .note,html[data-color-mode="dark"] .v7-help{background:#243247;color:#cbd5e1}
+html[data-color-mode="dark"] .muted,html[data-color-mode="dark"] small,html[data-color-mode="dark"] input::placeholder,html[data-color-mode="dark"] textarea::placeholder{color:#cbd5e1}
+html[data-color-mode="dark"] .status{background:#334155;color:#e2e8f0}
+html[data-color-mode="dark"] .status.paid{background:#14532d;color:#dcfce7}
+html[data-color-mode="dark"] .status.late{background:#7f1d1d;color:#fee2e2}
+html[data-color-mode="dark"] .paid-contract-seal span{background:#14532d;color:#dcfce7;border-color:#86efac}
+html[data-color-mode="dark"] .finder-person-v5 small{color:#cbd5e1}
+.sim-result{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface-solid);margin:16px 0}.sim-result strong{display:block;font-size:24px;margin:6px 0}.sim-result table{width:100%;font-size:12px;border-collapse:collapse}.sim-result td,.sim-result th{padding:8px 4px;text-align:right;border-bottom:1px solid var(--line)}.sim-result th:first-child,.sim-result td:first-child{text-align:left}
+
+html[data-color-mode="dark"] .primary-btn{color:#0f172a}
+
+html .bottom-nav.bottom-nav-v2{grid-template-columns:repeat(7,minmax(0,1fr))}
+html .bottom-nav .nav-btn small{font-size:9px}
+
+html[data-color-mode="dark"] .v21-pay-btn{background:#1e3a5f!important;color:#bfdbfe!important}
+html[data-color-mode="dark"] .v6-whatsapp{background:#14532d!important;color:#dcfce7!important}
+html[data-color-mode="dark"] .v21-zero{color:#86efac}
+html[data-color-mode="dark"] .v6-color-field{background:#243247}
