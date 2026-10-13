@@ -1,5 +1,5 @@
 const CACHE_PREFIX='credigestor-scope-'+encodeURIComponent(self.registration.scope)+'-';
-const CACHE=CACHE_PREFIX+'v37-charge-search1';
+const CACHE=CACHE_PREFIX+'v38-pix-copy1';
 const ASSETS=["./renegotiate.js","./contract-date.js","./fixed-pages.css","./display-v27.css","./","./index.html","./styles.css","./enhancements.css","./styles-v26.css","./firebase-config.js","./v26-core.js","./personal-login.js","./manifest.webmanifest","./icon-192.png","./icon-512.png","./app.js","./enhancements.js","./backup-csv.js","./features-v5.js","./features-v6.js","./features-v7.js","./features-v8.js","./features-v10.js","./features-v11.js","./features-v12.js","./features-v13.js","./features-v15.js","./features-v16.js","./features-v18.js","./features-v19.js","./features-v20.js","./features-v21.js","./features-v22.js","./features-v23.js","./features-v24.js","./features-v25.js","./features-simulator.js"];
 ASSETS.push("./dashboard-back.js","./payment-routes.js","./received-receipt.js","./charge-search.js",'./v26-core.js');
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
