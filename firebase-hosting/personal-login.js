@@ -21,7 +21,7 @@
     try{localStorage.setItem(KEY,raw);}catch(_){throw Error('Falta espaço no aparelho para a carteira. A cópia original permanece na nuvem.');}
   }
   async function launch(){
-    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=individual-partial1';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
+    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=collection-pix-emojis13';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
     document.getElementById('accountQuickBtn').onclick=openAccount;
     const original=renderSettings;renderSettings=function(){const out=original();const section=document.createElement('div');section.className='card';section.innerHTML='<h2>Minha conta</h2><p>Entrada automática com sua Conta Google.</p><button id="personalSettingsAccount" class="soft-btn" type="button">Minha conta e backup</button>';document.getElementById('view').prepend(section);section.querySelector('button').onclick=openAccount;return out;};
     if(currentView==='settings')renderSettings();
@@ -43,3 +43,16 @@
     (async()=>{await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);auth.onAuthStateChanged(async user=>{const token=++epoch;if(!user){lock('Entre com sua conta para continuar.');return;}if(user.uid!==OWNER||!user.emailVerified){lock('Este CrediGestor permite somente o acesso da sua conta principal.',true);return;}try{lock('Preparando sua carteira…');await seed(user,token);if(token!==epoch)return;if(!started){await launch();started=true;}if(token!==epoch||auth.currentUser?.uid!==OWNER)return;document.body.dataset.v26Locked='false';document.body.dataset.v26Role='administrador';document.getElementById('app').style.display='';document.getElementById('app').inert=false;document.getElementById('modal').inert=false;gate.style.display='none';}catch(e){if(token===epoch)lock(e.message,true);}});})().catch(e=>lock(e.message,true));
   }catch(e){lock(e.message,true);}
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -93,13 +93,24 @@
       `📦 Modalidade: ${m.modality}`;
   }
 
+  function latePaymentReferenceV25(cl,k,p){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(p?.paidAt||'')))return '';
+    const match=String(p?.reference||'').match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+    let due=p?.dueDateAtPayment,original=p?.referenceDate;
+    if(match){
+      const charge=chargeFor(cl,k,Number(match[1]),Number(match[2])-1);
+      if(!due)due=ymd(charge.due);
+      if(!original)original=ymd(charge.originalDue||charge.due);
+    }
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(due||''))&&p.paidAt>due&&original?`📌 Referência da cobrança em atraso (vencimento original): ${fmtDateV25(original)}\n`:'';
+  }
   function paymentReceiptV25(cl,k,p){
     return contractBlockV25(cl,k,'Comprovante de Pagamento')+`\n\n`+
       `✅ Valor pago: ${moneyV25(p?.amount||0)}\n`+
       `📅 Data do pagamento: ${fmtDateV25(p?.paidAt)}\n`+
       `💳 Forma de pagamento: ${p?.method||'Não informada'}\n`+
       `🗓️ Referência: ${p?.reference||'—'}\n`+
-      (p?.referenceDate&&p?.paidAt>p.referenceDate?`📌 Referência da cobrança em atraso (vencimento original): ${fmtDateV25(p.referenceDate)}\n`:'')+
+      latePaymentReferenceV25(cl,k,p)+
       `✅ Status: Pago`+(p?.note?`\n📝 Observação: ${p.note}`:'');
   }
 
