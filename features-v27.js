@@ -51,7 +51,7 @@
       const past=x.due instanceof Date?x.due:new Date(x.due);
       const todayDate=new Date();todayDate.setHours(0,0,0,0);
       const late=Number.isFinite(past.getTime())&&new Date(past.getFullYear(),past.getMonth(),past.getDate())<todayDate;
-      return {...x,payment:payments(k,x.ref)[0]||null,paidAmount:total,remainingAmount:Math.max(0,Math.round((amount-total)*100)/100),status:isPaid?'paid':(late?'late':(total>0?'partial':'open'))};
+      return {...x,payment:payments(k,x.ref)[0]||null,paidAmount:total,remainingAmount:Math.max(0,Math.round((amount-total)*100)/100),status:isPaid?'paid':(late?'late':'open')};// adiantamento mantém 'open': as listas de cobrança filtram por esse status
     };
   }
   function refresh(){try{if(typeof render==='function')render();else if(typeof renderCharges==='function')renderCharges()}catch(e){console.warn('Falha ao atualizar tela após a baixa',e)}}
@@ -238,15 +238,8 @@
       return out;
     };
   }
-  // API direta para qualquer módulo abrir o fluxo centralizado.
-  window.openPaymentModal=function(cid,kid,ref){openUnified(cid,kid,ref)};
-  // Intercepta os botões de baixa legados antes das rotinas antigas substituírem um pagamento parcial.
-  document.addEventListener('click',event=>{
-    const b=event.target?.closest?.('.v26-pay,.pay-btn,.v21-pay-btn');if(!b)return;
-    const cid=b.dataset.c||b.dataset.v21Client,kid=b.dataset.k||b.dataset.v21Loan,ref=b.dataset.r||b.dataset.v21Ref;
-    if(!cid||!kid||!refOK(ref))return;
-    event.preventDefault();event.stopImmediatePropagation();openUnified(cid,kid,ref);
-  },true);
+  // Os botões de cobrança seguem no hub "Pagamentos" da v21 (o mesmo do APK), que já trata
+  // pagamento parcial, amortização e quitação; o fluxo da v27 fica nos botões "Receber / Comprovante".
   installGlobalButton();
   window.CrediGestorPaymentsV27={version:VERSION,paid,payments,charge,register,openUnified,openHistory,openAudit,sendExisting};
   try{if(typeof currentView!=='undefined'&&currentView==='loans'&&typeof renderLoans2==='function')renderLoans2();
