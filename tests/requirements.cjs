@@ -81,7 +81,7 @@ const clients = [
         await offlinePage.goto(process.env.BASE_URL||`http://127.0.0.1:${server.address().port}`);
         await offlinePage.evaluate(()=>navigator.serviceWorker.ready);
         await offlinePage.waitForFunction(()=>navigator.serviceWorker.controller);
-        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v28')));
+        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v29')));
         await offlineContext.setOffline(true);await offlinePage.reload();
         assert.equal(await offlinePage.evaluate(()=>window.__credigestorV26.version),'27.0');
         await offlinePage.locator('[data-view="charges"]').click();assert.equal(await offlinePage.locator('[data-v26-tab]').count(),3);
