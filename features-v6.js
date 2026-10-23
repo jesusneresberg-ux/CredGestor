@@ -3,7 +3,7 @@
 (function(){
   'use strict';
 
-  const V6_DEFAULT_MESSAGE='Olá, {nome}. Sua cobrança de {valor}, referente a {referencia}, vence em {vencimento}.\n\nPagamento via PIX:\nTipo: {tipo_pix}\nChave: {chave_pix}\nFavorecido: {favorecido}\n\nApós o pagamento, por favor envie o comprovante.';
+  const V6_DEFAULT_MESSAGE='Olá, {nome}. Sua cobrança de {valor}, referente a {referencia}, vence em {vencimento}.\n\nApós o pagamento, por favor envie o comprovante.';
 
   const V6_THEME_DEFAULTS={
     aurora:{c1:'#2563eb',c2:'#4f46e5',c3:'#60a5fa',c4:'#c7d2fe'},
