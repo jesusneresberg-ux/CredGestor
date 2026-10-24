@@ -1,0 +1,12 @@
+Alteração preparada em 24/10/2026.
+
+Versão da interface: 2026.10.24
+Compilação da interface: 2026102401
+
+Inclui Sobre o CrediGestor no cabeçalho das duas publicações. Os identificadores se referem aos arquivos web, não ao APK Android. A versão e compilação do APK não são fornecidas pelo código disponível.
+
+Não publicado: GitHub recusou a gravação da integração (HTTP 403).
+
+Aplicação: na cópia do repositório, execute git apply --check CrediGestor-versao-compilacao.patch e depois git apply CrediGestor-versao-compilacao.patch. Confira e salve as alterações no GitHub. Para o aplicativo que abre o Firebase, publique a pasta firebase-hosting conforme o README existente. Alterar o GitHub Pages não publica no Firebase.
+
+Verificação: estrutura HTML, identificadores únicos e sintaxe dos dois service workers conferidos. Não testado no celular ou no Firebase publicado. Nenhuma regra financeira ou acesso a dados alterado.

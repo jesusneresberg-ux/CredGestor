@@ -1,49 +1,28 @@
-# CrediGestor Mobile — MVP 1
+# Versão aberta pelo APK CrediGestor
 
-Primeira versão funcional do projeto de gestão de crédito, feita para smartphone.
+O APK Android 26.2.1 abre https://credigestor-testes.web.app/ no navegador. O site de GitHub Pages na raiz deste repositório é uma publicação separada.
 
-## O que já está implementado
-- Dashboard mobile com carteira ativa, recebido, a receber, atraso e inadimplência.
-- Cadastro de clientes com níveis Bronze, Prata, Ouro e Diamante.
-- Limite de crédito por cliente e cálculo do limite disponível.
-- Contratos editáveis.
-- Acréscimo de novo valor e amortização dentro do mesmo contrato, com histórico.
-- Regra de vencimento por dia-base (1 a 31), preservando o dia original:
-  - dia 31 em setembro => dia 30;
-  - dia 31 em fevereiro => dia 28/29;
-  - no mês seguinte volta ao dia 31 quando existir.
-- Registro de pagamentos com mês de referência.
-- Garantias: veículo, terreno, chácara, joia, eletrodoméstico, eletroportátil e outros.
-- CRM com registros de ligação, WhatsApp, visita, acordo e renovação.
-- Score interno simples de apoio à decisão, sem aprovação automática.
-- Metas mensais.
-- Temas visuais, troca de fonte e imagem de fundo personalizada.
-- Opção de Google Agenda: gera evento de cobrança para o calendário.
-- Notificações web quando o app é aberto e há vencimentos nos dias configurados.
-- Backup e restauração em JSON.
-- PWA básica para instalar na tela inicial do celular.
+Esta pasta preserva a versão individual existente no Firebase, incluindo acesso Google, armazenamento no navegador, renegociação, datas de contratos e aparência. A atualização de 08/10/2026 adiciona Pagamento parcial na central de pagamentos e um comprovante resumido com destaque para o restante para quitar o mês. Os pagamentos são acumulados por referência, sem sobrescrever adiantamentos anteriores. Falhas de gravação não geram comprovante.
 
-## Como testar
-1. Para apenas ver a interface, abra `index.html` no navegador.
-2. Para instalar como PWA e usar service worker/notificações de forma correta, publique a pasta em HTTPS
-   (GitHub Pages, Netlify, Vercel, Render Static Site etc.) ou rode em um servidor local.
-3. No Android/Chrome, abra o endereço publicado e use "Adicionar à tela inicial".
+Publicar a partir desta pasta com Firebase CLI: `firebase deploy --only hosting --project credigestor-testes --non-interactive`.
 
-## Limitação proposital desta primeira entrega
-Os dados ficam no navegador do aparelho. Para muitos clientes, múltiplos dispositivos e segurança real,
-a próxima fase deve trocar o armazenamento local por banco de dados (por exemplo PostgreSQL/Supabase)
-com autenticação, backups automáticos e regras de acesso.
+O teste `tests/firebase-partial-payments.cjs` usa clientes fictícios e simula somente o acesso autenticado para exercitar as telas; não confirma login Google real, envio de WhatsApp nem execução no celular. Não contém dados da carteira. Pode usar `BASE_URL=https://credigestor-testes.web.app/` para testar os arquivos publicados.
 
-A integração atual com Google Agenda abre um evento pronto para confirmação. Sincronização automática
-bidirecional exige OAuth e Google Calendar API, recomendada para a fase 2.
+Não foi compilado um novo APK nesta atualização. O APK existente continua abrindo o mesmo endereço.
 
-## Próxima fase recomendada
-- Login/PIN/biometria.
-- Banco em nuvem e sincronização.
-- Histórico financeiro e relatórios avançados.
-- Filtros por dia de cobrança.
-- Anexos/fotos/documentos de garantias.
-- Exportação Excel/PDF.
-- Notificações em segundo plano no Android.
-- Integração Google Calendar via API.
-- APK Android (Capacitor/Android Studio).
+## Identificação da interface — 24/10/2026
+
+O cabeçalho contém “Sobre o CrediGestor”, com a versão da interface
+`2026.10.24` e compilação `2026102401`. Esses identificadores são atribuídos
+aos arquivos web desta entrega, e não ao pacote Android instalado. Incremente
+a compilação a cada nova entrega da interface.
+
+O repositório não contém o projeto Android nem um mecanismo que forneça
+`versionName`/`versionCode` à página. Por isso os dados do APK aparecem como
+não disponíveis. A menção ao APK 26.2.1 acima é uma referência documental,
+não uma detecção do APK instalado.
+
+A alteração só aparece no endereço aberto pelo APK depois de publicar esta pasta
+no Firebase Hosting. Alterar o GitHub Pages não atualiza essa publicação.
+Nenhum novo APK é gerado por esta alteração. Não há migração de dados.
+

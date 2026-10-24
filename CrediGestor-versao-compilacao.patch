@@ -1,0 +1,75 @@
+--- a/firebase-hosting/README.md
++++ b/firebase-hosting/README.md
+@@ -10,3 +10,19 @@
+ 
+ Não foi compilado um novo APK nesta atualização. O APK existente continua abrindo o mesmo endereço.
+ 
++## Identificação da interface — 24/10/2026
++
++O cabeçalho contém “Sobre o CrediGestor”, com a versão da interface
++`2026.10.24` e compilação `2026102401`. Esses identificadores são atribuídos
++aos arquivos web desta entrega, e não ao pacote Android instalado. Incremente
++a compilação a cada nova entrega da interface.
++
++O repositório não contém o projeto Android nem um mecanismo que forneça
++`versionName`/`versionCode` à página. Por isso os dados do APK aparecem como
++não disponíveis. A menção ao APK 26.2.1 acima é uma referência documental,
++não uma detecção do APK instalado.
++
++A alteração só aparece no endereço aberto pelo APK depois de publicar esta pasta
++no Firebase Hosting. Alterar o GitHub Pages não atualiza essa publicação.
++Nenhum novo APK é gerado por esta alteração. Não há migração de dados.
++
+--- a/firebase-hosting/index.html
++++ b/firebase-hosting/index.html
+@@ -18,6 +18,15 @@
+       <div>
+         <div class="eyebrow">GESTÃO DE CRÉDITO</div>
+         <h1 id="appTitle">CrediGestor</h1>
++        <details id="appVersionInfo" style="font-size:12px;line-height:1.5;margin-top:4px;overflow-wrap:anywhere">
++          <summary>Sobre o CrediGestor</summary>
++          <dl style="margin:4px 0">
++            <dt>Versão da interface</dt><dd style="margin-left:12px">2026.10.24</dd>
++            <dt>Compilação da interface</dt><dd style="margin-left:12px">2026102401</dd>
++            <dt>Publicação</dt><dd style="margin-left:12px">Firebase (interface aberta pelo APK)</dd>
++            <dt>Versão e compilação do APK</dt><dd style="margin-left:12px">Não disponíveis nesta interface.</dd>
++          </dl>
++        </details>
+       </div>
+       <div class="topbar-actions"><button id="accountQuickBtn" class="icon-btn" title="Conta">👤</button><button id="themeQuickBtn" class="icon-btn" title="Trocar tema">◐</button></div>
+     </header>
+--- a/firebase-hosting/sw.js
++++ b/firebase-hosting/sw.js
+@@ -1,5 +1,5 @@
+ const CACHE_PREFIX='credigestor-scope-'+encodeURIComponent(self.registration.scope)+'-';
+-const CACHE=CACHE_PREFIX+'v40-dia-base';
++const CACHE=CACHE_PREFIX+'v41-version-info';
+ const ASSETS=["./renegotiate.js","./contract-date.js","./fixed-pages.css","./display-v27.css","./","./index.html","./styles.css","./enhancements.css","./styles-v26.css","./firebase-config.js","./v26-core.js","./personal-login.js","./manifest.webmanifest","./icon-192.png","./icon-512.png","./app.js","./enhancements.js","./backup-csv.js","./features-v5.js","./features-v6.js","./features-v7.js","./features-v8.js","./features-v10.js","./features-v11.js","./features-v12.js","./features-v13.js","./features-v15.js","./features-v16.js","./features-v18.js","./features-v19.js","./features-v20.js","./features-v21.js","./features-v22.js","./features-v23.js","./features-v24.js","./features-v25.js","./features-simulator.js"];
+ ASSETS.push("./dashboard-back.js","./payment-routes.js","./received-receipt.js","./charge-search.js",'./v26-core.js');
+ self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
+--- a/index.html
++++ b/index.html
+@@ -15,6 +15,15 @@
+       <div>
+         <div class="eyebrow">GESTÃO DE CRÉDITO</div>
+         <h1 id="appTitle">CrediGestor</h1>
++        <details id="appVersionInfo" style="font-size:12px;line-height:1.5;margin-top:4px;overflow-wrap:anywhere">
++          <summary>Sobre o CrediGestor</summary>
++          <dl style="margin:4px 0">
++            <dt>Versão da interface</dt><dd style="margin-left:12px">2026.10.24</dd>
++            <dt>Compilação da interface</dt><dd style="margin-left:12px">2026102401</dd>
++            <dt>Publicação</dt><dd style="margin-left:12px">GitHub Pages</dd>
++            <dt>Versão e compilação do APK</dt><dd style="margin-left:12px">Não disponíveis nesta interface.</dd>
++          </dl>
++        </details>
+       </div>
+       <div class="topbar-actions"><button id="accountQuickBtn" class="icon-btn" title="Conta">👤</button><button id="themeQuickBtn" class="icon-btn" title="Trocar tema">◐</button></div>
+     </header>
+--- a/sw.js
++++ b/sw.js
+@@ -1,4 +1,4 @@
+-const CACHE='credigestor-v29';
++const CACHE='credigestor-v30-version-info';
+ const ASSETS=['./','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./backup-csv.js','./features-v5.js','./features-v6.js','./features-v7.js','./features-v8.js','./features-v10.js','./features-v11.js','./features-v12.js','./features-v13.js','./features-v15.js','./features-v16.js','./features-v17.js','./features-v18.js','./features-v19.js','./features-v20.js','./features-v21.js','./features-v22.js','./features-v23.js','./features-v24.js','./features-v25.js','./features-v26.js','./features-v27.js','./charge-search.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+ self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
+ self.addEventListener('activate',e=>e.waitUntil(Promise.all([
