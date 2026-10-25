@@ -1,0 +1,37 @@
+{
+  "appId": "com.credigestor.app",
+  "appName": "CrediGestor",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://credigestor-testes.web.app/",
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "credigestor-keystore.jks",
+      "keystorePassword": "YOUR_KEYSTORE_PASSWORD",
+      "keystoreAlias": "credigestor",
+      "keystoreAliasPassword": "YOUR_ALIAS_PASSWORD"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#0f172a",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#0f172a"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "dark"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+// App-level build file for Android
+// Renomear para: android/app/build.gradle após criação do projeto
+
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.credigestor.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.credigestor.app"
+        minSdk 22
+        targetSdk 34
+        versionCode 26
+        versionName "2026.10.25"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Configuração de assinatura
+            signingConfig signingConfigs.release
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../credigestor-keystore.jks')
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "YOUR_KEYSTORE_PASSWORD"
+            keyAlias "credigestor"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "YOUR_KEY_PASSWORD"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
+    implementation 'androidx.core:core-splashscreen:1.0.1'
+
+    // Capacitor
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-app')
+    implementation project(':capacitor-haptics')
+    implementation project(':capacitor-keyboard')
+    implementation project(':capacitor-status-bar')
+    implementation project(':capacitor-splash-screen')
+    implementation project(':capacitor-share')
+    implementation project(':capacitor-filesystem')
+
+    // Firebase (opcional, se usar Firebase)
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-auth'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// Se usar Firebase
+apply plugin: 'com.google.gms.google-services'

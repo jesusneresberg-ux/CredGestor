@@ -6,8 +6,9 @@
   <meta name="theme-color" content="#0f172a" />
   <title>CrediGestor</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=27" />
-  <link rel="stylesheet" href="enhancements.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=29" />
+  <link rel="stylesheet" href="enhancements.css?v=29" />
+  <link rel="stylesheet" href="payment-history.css?v=29" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -18,14 +19,18 @@
         <details id="appVersionInfo" style="font-size:12px;line-height:1.5;margin-top:4px;overflow-wrap:anywhere">
           <summary>Sobre o CrediGestor</summary>
           <dl style="margin:4px 0">
-            <dt>Versão da interface</dt><dd style="margin-left:12px">2026.10.24</dd>
-            <dt>Compilação da interface</dt><dd style="margin-left:12px">2026102401</dd>
-            <dt>Publicação</dt><dd style="margin-left:12px">GitHub Pages</dd>
+            <dt>Versão da interface</dt><dd style="margin-left:12px">2026.10.25</dd>
+            <dt>Compilação da interface</dt><dd style="margin-left:12px">2026102501</dd>
+            <dt>Publicação</dt><dd style="margin-left:12px">GitHub Pages / Firebase</dd>
+            <dt>Novidades</dt><dd style="margin-left:12px">Histórico de pagamentos e extrato por cliente</dd>
             <dt>Versão e compilação do APK</dt><dd style="margin-left:12px">Não disponíveis nesta interface.</dd>
           </dl>
         </details>
       </div>
-      <div class="topbar-actions"><button id="accountQuickBtn" class="icon-btn" title="Conta">👤</button><button id="themeQuickBtn" class="icon-btn" title="Trocar tema">◐</button></div>
+      <div class="topbar-actions">
+        <button id="accountQuickBtn" class="icon-btn" title="Conta">👤</button>
+        <button id="themeQuickBtn" class="icon-btn" title="Trocar tema">◐</button>
+      </div>
     </header>
 
     <main id="view" class="view"></main>
@@ -48,32 +53,40 @@
   </dialog>
 
   <input id="importInput" type="file" accept=".json,.csv,application/json,text/csv" hidden />
-  <script src="app.js?v=27"></script>
-  <script src="enhancements.js?v=27"></script>
-  <script src="backup-csv.js?v=27"></script>
+
+  <!-- Scripts principais -->
+  <script src="app.js?v=29"></script>
+  <script src="enhancements.js?v=29"></script>
+  <script src="backup-csv.js?v=29"></script>
+
+  <!-- Firebase e Auth Google -->
   <script async defer src="https://accounts.google.com/gsi/client"></script>
-  <script src="features-v5.js?v=27"></script>
-  <script src="features-v6.js?v=27"></script>
-  <script src="features-v7.js?v=27"></script>
-  <script src="features-v8.js?v=27"></script>
-  <script src="features-v10.js?v=27"></script>
-  <script src="features-v11.js?v=27"></script>
-  <script src="features-v12.js?v=27"></script>
-  <script src="features-v13.js?v=27"></script>
-  <script src="features-v15.js?v=27"></script>
-  <script src="features-v16.js?v=27"></script>
-  <script src="features-v17.js?v=27"></script>
-  <script src="features-v18.js?v=27"></script>
-  <script src="features-v19.js?v=27"></script>
-  <script src="features-v20.js?v=27"></script>
-  <script src="features-v21.js?v=27"></script>
-  <script src="features-v22.js?v=27"></script>
-  <script src="features-v23.js?v=27"></script>
-  <script src="features-v24.js?v=27"></script>
-  <script src="features-v25.js?v=27"></script>
-  <script src="features-v26.js?v=28"></script>
-  <script src="features-v27.js?v=28"></script>
-  <script src="charge-search.js?v=28"></script>
+
+  <!-- Módulos de funcionalidades -->
+  <script src="features-v5.js?v=29"></script>
+  <script src="features-v6.js?v=29"></script>
+  <script src="features-v7.js?v=29"></script>
+  <script src="features-v8.js?v=29"></script>
+  <script src="features-v10.js?v=29"></script>
+  <script src="features-v11.js?v=29"></script>
+  <script src="features-v12.js?v=29"></script>
+  <script src="features-v13.js?v=29"></script>
+  <script src="features-v15.js?v=29"></script>
+  <script src="features-v16.js?v=29"></script>
+  <script src="features-v17.js?v=29"></script>
+  <script src="features-v18.js?v=29"></script>
+  <script src="features-v19.js?v=29"></script>
+  <script src="features-v20.js?v=29"></script>
+  <script src="features-v21.js?v=29"></script>
+  <script src="features-v22.js?v=29"></script>
+  <script src="features-v23.js?v=29"></script>
+  <script src="features-v24.js?v=29"></script>
+  <script src="features-v25.js?v=29"></script>
+  <script src="features-v26.js?v=29"></script>
+  <script src="features-v27.js?v=29"></script>
+  <script src="charge-search.js?v=29"></script>
+
+  <!-- NOVO: Módulo de histórico de pagamentos -->
+  <script src="features-payment-history.js?v=29"></script>
 </body>
 </html>
-
