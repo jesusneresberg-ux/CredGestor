@@ -1,12 +1,14 @@
 /**
  * CredGestor - Sistema de Histórico de Pagamentos
- * Versão: 2026.10.25
+ * Versão: 2026.10.25.1
  *
  * Funcionalidades:
  * - Histórico completo de pagamentos por cliente
  * - Extrato detalhado com filtros
  * - Armazenamento persistente (Firebase + LocalStorage)
  * - Exportação de extrato em PDF e CSV
+ * - Excluir pagamentos
+ * - Enviar comprovante via WhatsApp
  */
 
 (function() {
@@ -21,6 +23,7 @@
    *   id: string,
    *   clientId: string,
    *   clientName: string,
+   *   clientPhone: string,
    *   loanId: string,
    *   amount: number,
    *   date: string (ISO),
@@ -31,7 +34,9 @@
    *   notes: string,
    *   receiptNumber: string,
    *   createdAt: string (ISO),
-   *   createdBy: string (userId)
+   *   createdBy: string (userId),
+   *   deletedAt: string (ISO) | null,
+   *   deletedBy: string | null
    * }
    */
 
@@ -71,6 +76,69 @@
     } catch (error) {
       console.error('Erro ao salvar pagamento:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Exclui um pagamento (soft delete)
+   */
+  async function deletePayment(paymentId) {
+    try {
+      const payment = await getPaymentById(paymentId);
+
+      if (!payment) {
+        throw new Error('Pagamento não encontrado');
+      }
+
+      // Marca como deletado
+      payment.deletedAt = new Date().toISOString();
+      payment.deletedBy = window.appState?.user?.email || 'unknown';
+
+      // Atualiza no Firebase
+      if (window.firebase && window.appState?.user) {
+        const db = firebase.firestore();
+        await db.collection('payments').doc(paymentId).update({
+          deletedAt: payment.deletedAt,
+          deletedBy: payment.deletedBy
+        });
+      }
+
+      // Atualiza no LocalStorage
+      const localPayments = getLocalPayments();
+      if (localPayments[paymentId]) {
+        localPayments[paymentId].deletedAt = payment.deletedAt;
+        localPayments[paymentId].deletedBy = payment.deletedBy;
+        localStorage.setItem('credigestor_payments', JSON.stringify(localPayments));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir pagamento:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtém um pagamento por ID
+   */
+  async function getPaymentById(paymentId) {
+    try {
+      // Tenta buscar do Firebase primeiro
+      if (window.firebase && window.appState?.user) {
+        const db = firebase.firestore();
+        const doc = await db.collection('payments').doc(paymentId).get();
+
+        if (doc.exists) {
+          return { id: doc.id, ...doc.data() };
+        }
+      }
+
+      // Fallback para LocalStorage
+      const localPayments = getLocalPayments();
+      return localPayments[paymentId] || null;
+    } catch (error) {
+      console.error('Erro ao buscar pagamento:', error);
+      return null;
     }
   }
 
@@ -119,7 +187,9 @@
       // Tenta buscar do Firebase primeiro
       if (window.firebase && window.appState?.user) {
         const db = firebase.firestore();
-        let query = db.collection('payments').where('clientId', '==', clientId);
+        let query = db.collection('payments')
+          .where('clientId', '==', clientId)
+          .where('deletedAt', '==', null);
 
         // Aplicar filtros
         if (options.startDate) {
@@ -141,7 +211,7 @@
 
         payments = clientPaymentIds
           .map(id => localPayments[id])
-          .filter(p => p && (!options.startDate || p.date >= options.startDate) && (!options.endDate || p.date <= options.endDate))
+          .filter(p => p && !p.deletedAt && (!options.startDate || p.date >= options.startDate) && (!options.endDate || p.date <= options.endDate))
           .sort((a, b) => new Date(b.date) - new Date(a.date));
       }
 
@@ -193,13 +263,125 @@
   }
 
   // ============================================
+  // GERAÇÃO DE COMPROVANTES
+  // ============================================
+
+  /**
+   * Gera texto do comprovante para envio
+   */
+  function generateReceiptText(payment) {
+    const date = new Date(payment.date);
+    const typeLabel = payment.type === 'total' ? 'Pagamento Total' : 'Pagamento Parcial';
+
+    return `
+🧾 *COMPROVANTE DE PAGAMENTO*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *Dados do Pagamento*
+• Comprovante: ${payment.receiptNumber || payment.id}
+• Data: ${date.toLocaleDateString('pt-BR')}
+• Horário: ${date.toLocaleTimeString('pt-BR')}
+
+👤 *Cliente*
+• Nome: ${payment.clientName}
+
+💰 *Valores*
+• Tipo: ${typeLabel}
+• Valor Pago: R$ ${payment.amount.toFixed(2)}
+• Referência: ${payment.reference}
+• Saldo Restante: R$ ${payment.balance.toFixed(2)}
+
+💳 *Forma de Pagamento*
+• ${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+
+${payment.notes ? `📝 *Observações*\n• ${payment.notes}\n\n` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Pagamento registrado com sucesso
+
+_CredGestor - Sistema de Gestão de Crédito_
+_Gerado em: ${new Date().toLocaleString('pt-BR')}_
+    `.trim();
+  }
+
+  /**
+   * Envia comprovante via WhatsApp
+   */
+  async function sendReceiptViaWhatsApp(paymentId) {
+    try {
+      const payment = await getPaymentById(paymentId);
+
+      if (!payment) {
+        throw new Error('Pagamento não encontrado');
+      }
+
+      if (!payment.clientPhone) {
+        throw new Error('Cliente não possui telefone cadastrado');
+      }
+
+      // Limpa número de telefone (remove caracteres não numéricos)
+      const phone = payment.clientPhone.replace(/\D/g, '');
+
+      // Gera texto do comprovante
+      const receiptText = generateReceiptText(payment);
+
+      // Codifica texto para URL
+      const encodedText = encodeURIComponent(receiptText);
+
+      // Monta URL do WhatsApp
+      const whatsappUrl = `https://wa.me/55${phone}?text=${encodedText}`;
+
+      // Abre WhatsApp
+      window.open(whatsappUrl, '_blank');
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao enviar comprovante:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Copia comprovante para área de transferência
+   */
+  async function copyReceiptToClipboard(paymentId) {
+    try {
+      const payment = await getPaymentById(paymentId);
+
+      if (!payment) {
+        throw new Error('Pagamento não encontrado');
+      }
+
+      const receiptText = generateReceiptText(payment);
+
+      // Tenta usar API moderna primeiro
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(receiptText);
+      } else {
+        // Fallback para navegadores antigos
+        const textarea = document.createElement('textarea');
+        textarea.value = receiptText;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao copiar comprovante:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
   // INTERFACE DE USUÁRIO
   // ============================================
 
   /**
    * Renderiza a tela de histórico de pagamentos
    */
-  async function renderPaymentHistory(clientId, clientName) {
+  async function renderPaymentHistory(clientId, clientName, clientPhone) {
     const payments = await getClientPaymentHistory(clientId);
     const stats = calculateStats(payments);
 
@@ -255,7 +437,7 @@
         </div>
 
         <div class="payments-list">
-          ${renderPaymentsList(payments)}
+          ${renderPaymentsList(payments, clientPhone)}
         </div>
       </div>
     `;
@@ -266,7 +448,7 @@
   /**
    * Renderiza lista de pagamentos
    */
-  function renderPaymentsList(payments) {
+  function renderPaymentsList(payments, clientPhone) {
     if (payments.length === 0) {
       return '<div class="empty-state">Nenhum pagamento registrado.</div>';
     }
@@ -308,11 +490,17 @@
             R$ ${payment.amount.toFixed(2)}
           </div>
           <div class="payment-actions">
-            <button class="btn-icon view-receipt" data-payment-id="${payment.id}" title="Ver Comprovante">
-              🧾
+            <button class="btn-icon send-receipt" data-payment-id="${payment.id}" data-phone="${clientPhone || ''}" title="Enviar Comprovante">
+              📤
+            </button>
+            <button class="btn-icon copy-receipt" data-payment-id="${payment.id}" title="Copiar Comprovante">
+              📋
             </button>
             <button class="btn-icon view-details" data-payment-id="${payment.id}" title="Detalhes">
               ℹ️
+            </button>
+            <button class="btn-icon delete-payment" data-payment-id="${payment.id}" title="Excluir">
+              🗑️
             </button>
           </div>
         </div>
@@ -469,6 +657,7 @@
           await savePayment({
             clientId: paymentData.clientId,
             clientName: paymentData.clientName,
+            clientPhone: paymentData.clientPhone,
             loanId: paymentData.loanId,
             amount: paymentData.amount,
             date: paymentData.date || new Date().toISOString(),
@@ -503,18 +692,81 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Event delegation para botões dinâmicos
       document.addEventListener('click', async (e) => {
+        // Ver histórico
         if (e.target.closest('.view-payment-history')) {
           const btn = e.target.closest('.view-payment-history');
           const clientId = btn.dataset.clientId;
           const clientName = btn.dataset.clientName;
+          const clientPhone = btn.dataset.clientPhone;
 
           const modal = document.getElementById('modal');
           const modalContent = document.getElementById('modalContent');
 
-          modalContent.innerHTML = await renderPaymentHistory(clientId, clientName);
+          modalContent.innerHTML = await renderPaymentHistory(clientId, clientName, clientPhone);
           modal.showModal();
 
-          attachHistoryEventListeners(clientId, clientName);
+          attachHistoryEventListeners(clientId, clientName, clientPhone);
+        }
+
+        // Enviar comprovante via WhatsApp
+        if (e.target.closest('.send-receipt')) {
+          const btn = e.target.closest('.send-receipt');
+          const paymentId = btn.dataset.paymentId;
+          const phone = btn.dataset.phone;
+
+          if (!phone) {
+            alert('Cliente não possui telefone cadastrado.');
+            return;
+          }
+
+          try {
+            await sendReceiptViaWhatsApp(paymentId);
+            showNotification('Comprovante enviado via WhatsApp!', 'success');
+          } catch (error) {
+            alert('Erro ao enviar comprovante: ' + error.message);
+          }
+        }
+
+        // Copiar comprovante
+        if (e.target.closest('.copy-receipt')) {
+          const btn = e.target.closest('.copy-receipt');
+          const paymentId = btn.dataset.paymentId;
+
+          try {
+            await copyReceiptToClipboard(paymentId);
+            showNotification('Comprovante copiado!', 'success');
+          } catch (error) {
+            alert('Erro ao copiar comprovante: ' + error.message);
+          }
+        }
+
+        // Excluir pagamento
+        if (e.target.closest('.delete-payment')) {
+          const btn = e.target.closest('.delete-payment');
+          const paymentId = btn.dataset.paymentId;
+
+          if (!confirm('Tem certeza que deseja excluir este pagamento?')) {
+            return;
+          }
+
+          try {
+            await deletePayment(paymentId);
+
+            // Remove item da lista
+            const paymentItem = btn.closest('.payment-item');
+            paymentItem.style.opacity = '0';
+            setTimeout(() => {
+              paymentItem.remove();
+
+              // Atualiza estatísticas
+              const clientId = document.querySelector('.payment-history-container').dataset.clientId;
+              refreshStatistics(clientId);
+            }, 300);
+
+            showNotification('Pagamento excluído com sucesso!', 'success');
+          } catch (error) {
+            alert('Erro ao excluir pagamento: ' + error.message);
+          }
         }
       });
     });
@@ -523,7 +775,15 @@
   /**
    * Anexa event listeners aos elementos do histórico
    */
-  function attachHistoryEventListeners(clientId, clientName) {
+  function attachHistoryEventListeners(clientId, clientName, clientPhone) {
+    // Salva dados no container para uso posterior
+    const container = document.querySelector('.payment-history-container');
+    if (container) {
+      container.dataset.clientId = clientId;
+      container.dataset.clientName = clientName;
+      container.dataset.clientPhone = clientPhone;
+    }
+
     // Filtros
     document.getElementById('filterMonth')?.addEventListener('change', async (e) => {
       const [year, month] = e.target.value.split('-');
@@ -531,12 +791,14 @@
       const endDate = new Date(year, month, 0).toISOString();
 
       const payments = await getClientPaymentHistory(clientId, { startDate, endDate });
-      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments);
+      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments, clientPhone);
+      attachHistoryEventListeners(clientId, clientName, clientPhone);
     });
 
     document.getElementById('filterType')?.addEventListener('change', async (e) => {
       const payments = await getClientPaymentHistory(clientId, { type: e.target.value || undefined });
-      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments);
+      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments, clientPhone);
+      attachHistoryEventListeners(clientId, clientName, clientPhone);
     });
 
     document.getElementById('clearFilters')?.addEventListener('click', async () => {
@@ -545,7 +807,8 @@
       document.getElementById('filterMethod').value = '';
 
       const payments = await getClientPaymentHistory(clientId);
-      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments);
+      document.querySelector('.payments-list').innerHTML = renderPaymentsList(payments, clientPhone);
+      attachHistoryEventListeners(clientId, clientName, clientPhone);
     });
 
     // Exportação
@@ -561,14 +824,63 @@
     });
   }
 
+  /**
+   * Atualiza estatísticas após mudanças
+   */
+  async function refreshStatistics(clientId) {
+    const payments = await getClientPaymentHistory(clientId);
+    const stats = calculateStats(payments);
+
+    // Atualiza cards de estatísticas
+    const statCards = document.querySelectorAll('.stat-card');
+    if (statCards.length >= 3) {
+      statCards[0].querySelector('.stat-value').textContent = `R$ ${stats.total.toFixed(2)}`;
+      statCards[1].querySelector('.stat-value').textContent = stats.count;
+      statCards[2].querySelector('.stat-value').textContent = `R$ ${stats.avgAmount.toFixed(2)}`;
+    }
+  }
+
+  /**
+   * Mostra notificação
+   */
+  function showNotification(message, type = 'info') {
+    // Implementação simples - pode ser substituída por um sistema de notificações mais elaborado
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+
   // Expõe API pública
   window.PaymentHistory = {
     savePayment,
+    deletePayment,
+    getPaymentById,
     getClientPaymentHistory,
     calculateStats,
     renderPaymentHistory,
     exportToCSV,
     exportToPDF,
+    sendReceiptViaWhatsApp,
+    copyReceiptToClipboard,
     init
   };
 

@@ -11,6 +11,9 @@ Sistema completo de Gestão de Crédito com histórico de pagamentos e geração
 - ✅ Armazenamento persistente (Firebase + LocalStorage como backup)
 - ✅ Exportação em CSV e PDF
 - ✅ Impressão de extratos
+- ✅ **NOVO: Excluir pagamentos do histórico**
+- ✅ **NOVO: Enviar comprovante via WhatsApp**
+- ✅ **NOVO: Copiar comprovante para área de transferência**
 - ✅ Interface responsiva (mobile e desktop)
 - ✅ Tema claro e escuro
 
@@ -52,6 +55,39 @@ O módulo de histórico se integra automaticamente ao sistema existente. Quando 
    - **Por tipo**: Total ou Parcial
    - **Por forma**: Dinheiro, PIX, Transferência, Cartão
 
+### Ações Disponíveis para Cada Pagamento
+
+#### 📤 Enviar Comprovante via WhatsApp
+- Clique no botão verde "📤" ao lado do pagamento
+- O comprovante será formatado automaticamente
+- Abrirá o WhatsApp Web/App com a mensagem pronta
+- Requisito: Cliente deve ter telefone cadastrado
+
+#### 📋 Copiar Comprovante
+- Clique no botão azul "📋" ao lado do pagamento
+- Comprovante será copiado para área de transferência
+- Cole onde quiser (SMS, e-mail, etc.)
+
+#### 🗑️ Excluir Pagamento
+- Clique no botão vermelho "🗑️" ao lado do pagamento
+- Confirme a exclusão
+- Pagamento será removido do histórico
+- Ação não pode ser desfeita (soft delete no banco)
+
+### Formato do Comprovante
+
+O comprovante gerado contém:
+- 🧾 Número do comprovante
+- 📅 Data e hora do pagamento
+- 👤 Nome do cliente
+- 💰 Valor pago e saldo restante
+- 💳 Forma de pagamento
+- 📝 Observações (se houver)
+- ✅ Confirmação de registro
+   - **Por mês**: Selecione um mês específico
+   - **Por tipo**: Total ou Parcial
+   - **Por forma**: Dinheiro, PIX, Transferência, Cartão
+
 ### Exportar Extrato
 
 - **CSV**: Clique em "Exportar CSV" para gerar planilha
@@ -70,6 +106,37 @@ Cada pagamento armazena:
 - Observações
 - Número do comprovante
 - Usuário que registrou
+- Telefone do cliente (para envio de comprovante)
+
+### Exemplo de Comprovante Gerado
+
+```
+🧾 COMPROVANTE DE PAGAMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Dados do Pagamento
+• Comprovante: PAY-1234567890-abc123
+• Data: 25/10/2026
+• Horário: 14:30:00
+
+👤 Cliente
+• Nome: João Silva
+
+💰 Valores
+• Tipo: Pagamento Parcial
+• Valor Pago: R$ 500,00
+• Referência: 10/2026
+• Saldo Restante: R$ 1.500,00
+
+💳 Forma de Pagamento
+• PIX
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Pagamento registrado com sucesso
+
+CredGestor - Sistema de Gestão de Crédito
+Gerado em: 25/10/2026 14:30:00
+```
 
 ## 📱 Como Gerar o APK Android
 
