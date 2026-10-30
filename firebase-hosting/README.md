@@ -9,3 +9,12 @@ Publicar a partir desta pasta com Firebase CLI: `firebase deploy --only hosting 
 O teste `tests/firebase-partial-payments.cjs` usa clientes fictícios e simula somente o acesso autenticado para exercitar as telas; não confirma login Google real, envio de WhatsApp nem execução no celular. Não contém dados da carteira. Pode usar `BASE_URL=https://credigestor-testes.web.app/` para testar os arquivos publicados.
 
 Não foi compilado um novo APK nesta atualização. O APK existente continua abrindo o mesmo endereço.
+
+## Histórico de pagamentos — 30/10/2026
+
+A ficha do cliente tem o botão “🧾 Histórico de pagamentos” (`features-payment-history.js`
+e `payment-history.css`). Ele lê os pagamentos já gravados nos contratos, então
+os dados sincronizados pelo Firebase aparecem sem migração. Permite filtrar por
+mês, tipo e forma, exportar CSV, imprimir/salvar PDF, enviar o comprovante pelo
+WhatsApp e excluir um pagamento (o saldo é recalculado). Publique esta pasta no
+Firebase Hosting para a mudança chegar ao APK. Não é preciso gerar novo APK.
