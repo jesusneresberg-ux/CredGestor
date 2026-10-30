@@ -16,3 +16,4 @@ jobs:
       - run: node tests/requirements.cjs
       - run: node tests/partial-payments.cjs
       - run: node tests/firebase-partial-payments.cjs
+      - run: node tests/payment-history.cjs
