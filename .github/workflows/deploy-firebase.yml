@@ -16,6 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verificar secret da conta de serviço
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CREDIGESTOR_TESTES }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT_CREDIGESTOR_TESTES ausente ou vazio para este repositório."
+            exit 1
+          fi
+          echo "Secret presente: ${#SA} caracteres."
+          node -e 'let j;try{j=JSON.parse(process.env.SA)}catch{console.log("::error::Secret não é um JSON válido (cole o arquivo .json inteiro).");process.exit(1)}if(j.type!=="service_account"){console.log("::error::JSON não é de conta de serviço.");process.exit(1)}console.log("JSON válido; project_id:",j.project_id)'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
