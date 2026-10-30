@@ -1,0 +1,15 @@
+/* CrediGestor - Histórico de pagamentos por cliente (2026.10.30) */
+.ph-open{display:block;width:100%;margin-top:12px}
+.ph-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.ph-stats .metric strong{font-size:16px;overflow-wrap:anywhere}
+.ph-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ph-filters input,.ph-filters select{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-solid,var(--surface));color:var(--text);font:inherit}
+.ph-list{margin-top:12px}
+.ph-month{margin:12px 0 4px;font-size:12px;font-weight:700;text-transform:capitalize;color:var(--muted)}
+.ph-month:first-child{margin-top:0}
+.ph-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.ph-item:last-child{border-bottom:0}
+.ph-item .muted{font-size:12px;margin-top:4px}
+.ph-item .note{font-size:12px;margin-top:4px}
+.ph-item .inline-actions{margin-top:8px}
+@media (max-width:420px){.ph-stats{grid-template-columns:1fr}.ph-filters{grid-template-columns:1fr}}
