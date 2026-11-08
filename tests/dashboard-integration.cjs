@@ -11,3 +11,6 @@ const button={setAttribute(){}};const ctx={state:{clients:[{name:'Cliente Teste'
 function request(source=child,origin=ctx.location.origin){events.message({source,origin,data:{type:'credigestor:panel-request',version:1}})}
 request({},ctx.location.origin);request(child,'https://evil.example');assert.equal(sent.length,0);request();assert.equal(sent.length,1);assert.equal(JSON.stringify(sent).includes('NUNCA-ENVIAR'),false);assert.equal(sent[0].o,ctx.location.origin);
 uid='another-user';request();assert.equal(sent.length,1);uid=OWNER;ctx.saveState();assert.equal(stored,true);assert.equal(sent.length,2);fail=true;assert.throws(()=>ctx.saveState(),/disk full/);assert.equal(sent.length,2);console.log('PASS: currency parsing, schema validation, noncash classification, exact origin/window checks, owner checks, no PII/token forwarding, save failure isolation');
+
+// Missing authentication and failed panel delivery must never block saving.
+fail=false;delete ctx.firebase;assert.equal(ctx.saveState(),true);ctx.firebase={auth:()=>({currentUser:{uid:OWNER,emailVerified:true}})};child.postMessage=()=>{throw Error("panel unavailable")};ctx.console={warn(){}};assert.equal(ctx.saveState(),true);
