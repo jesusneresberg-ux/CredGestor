@@ -102,7 +102,7 @@
     const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false){alert('Este empréstimo está encerrado.');return null}
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(ref)){alert('Informe um mês de referência válido.');return null}
-    const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1);
+    const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1,paidAt);
     const cents=Math.round(Number(amount)*100),remainingCents=Math.round(charge.remaining*100);
     if(charge.status==='not_due'||charge.amount<=0){alert('Escolha um mês a partir do primeiro vencimento do empréstimo.');return null}
     if(!Number.isFinite(cents)||cents<=0){alert('Informe um valor maior que zero.');return null}
