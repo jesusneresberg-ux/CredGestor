@@ -14,7 +14,7 @@
   const ordinal=d=>Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/MS;
   const matching=(p,ref)=>String(p.reference||p.ref||'')===ref;
   function accruedLateInterest(k,row,untilValue){
-    const until=day(untilValue),due=day(row.originalDue||row.due),base=cents(row.amount),rate=Number(k.interestRate)||0;
+    const until=day(untilValue),due=day(row.due||row.originalDue),base=cents(row.amount),rate=Number(k.interestRate)||0;
     if(!until||!due||ordinal(until)<=ordinal(due)||base<=0||rate<=0||isPaidContract(k))return {cents:0,days:0};
     const paid=(k.payments||[]).filter(p=>matching(p,row.ref)&&cents(p.amount)>0&&day(p.paidAt||p.date))
       .map(p=>({when:ordinal(day(p.paidAt||p.date)),amount:cents(p.amount)})).sort((a,b)=>a.when-b.when);
@@ -42,7 +42,7 @@
     // para abater o saldo de uma consulta retroativa.
     const paid=cents((k.payments||[]).filter(p=>matching(p,row.ref)&&ordinal(day(p.paidAt||p.date)||asOf)<=ordinal(asOf))
       .reduce((total,p)=>total+Math.max(0,Number(p.amount)||0),0));
-    const due=day(row.originalDue||row.due),remaining=Math.max(0,base+extra.cents-paid);
+    const due=day(row.due||row.originalDue),remaining=Math.max(0,base+extra.cents-paid);
     row.baseAmount=money(base);row.lateInterest=money(extra.cents);row.lateDays=extra.days;
     row.amount=money(base+extra.cents);row.paid=money(paid);row.remaining=money(remaining);
     row.status=remaining===0?'paid':due&&ordinal(due)<ordinal(asOf)?'late':'open';
@@ -63,7 +63,7 @@
     const rows=[];
     for(let i=from;i<=to&&i<from+1200;i++){
       const y=Math.floor(i/12),m=i%12,row=chargeFor(cl,k,y,m,end);
-      if(row.status!=='not_due'&&row.remaining>0&&ordinal(day(row.originalDue||row.due))<=ordinal(end))rows.push(row);
+      if(row.status!=='not_due'&&row.remaining>0&&ordinal(day(row.due||row.originalDue))<=ordinal(end))rows.push(row);
     }
     return rows;
   }
@@ -72,7 +72,7 @@
     const late=rows.reduce((n,r)=>n+cents(r.lateInterest),0);
     const text=[`*EXTRATO DE COBRANÇA — CREDIGESTOR*`,`Cliente: ${cl.name}`,`Contrato: ${k.loanCode||k.title||'Contrato'}`,`Atualizado em: ${when.toLocaleDateString('pt-BR')}`,`Capital ativo (informativo): ${brl(contractBalance(k))}`,``];
     if(!rows.length)text.push('Nenhuma cobrança vencida permanece em aberto nesta data.');
-    rows.forEach(r=>text.push(`Referência ${r.ref} · vence em ${day(r.originalDue||r.due).toLocaleDateString('pt-BR')}`,
+    rows.forEach(r=>text.push(`Referência ${r.ref} · vence em ${day(r.due||r.originalDue).toLocaleDateString('pt-BR')}`,
       `Cobrança original: ${brl(r.baseAmount)}`,`Juros proporcionais por atraso: ${brl(r.lateInterest)} (${r.lateDays} dia(s) calculado(s))`,
       `Valores já registrados: ${brl(r.paid)}`,`Saldo desta referência: ${brl(r.remaining)}`,``));
     text.push(`Juros de atraso nas referências abertas: ${brl(money(late))}`,
