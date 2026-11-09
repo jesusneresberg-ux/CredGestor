@@ -198,11 +198,15 @@
     if(!container||!pair||document.getElementById('v29ParcelLate'))return;
     const field=document.createElement('div');field.className='rule-note';field.id='v29ParcelLate';
     const first=container.querySelector('.card');if(first)first.after(field);
+    let lastQuoted=null;
     const refresh=()=>{
       const ref=document.getElementById('v21Ref')?.value,at=document.getElementById('v21Date')?.value;
       const [y,m]=String(ref||'').split('-').map(Number);
       if(!y||!m||m<1||m>12){field.textContent='Selecione uma referência válida.';return;}
       const r=chargeFor(pair.cl,pair.k,y,m-1,at);
+      const input=document.getElementById('v21Amount');
+      if(input&&lastQuoted!==null&&cents(input.value)===lastQuoted)input.value=Number(r.remaining).toFixed(2);
+      lastQuoted=cents(r.remaining);
       field.textContent=r.lateInterest>0?`Juros proporcionais de atraso: ${brl(r.lateInterest)} (${r.lateDays} dia(s)). Total para a referência na data escolhida: ${brl(r.remaining)}.`:
         'Sem juros adicionais de atraso na data informada.';
     };
@@ -238,6 +242,8 @@
       return result;
     };
   }
+  clearOldButtons(document.getElementById('view'));
+  clearOldButtons(document.getElementById('modalContent'));
   const previousModal=openModal;
   openModal=function(html,bind){
     return previousModal(html,()=>{
