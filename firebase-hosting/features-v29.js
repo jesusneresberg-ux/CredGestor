@@ -178,10 +178,18 @@
     st.innerHTML='<span class="ico">▤</span><span><b>Enviar extrato ao cliente</b><small>Cobranças em aberto com juros proporcionais desde o 1º dia de atraso.</small></span>';
     st.onclick=()=>{
       const {cl,k}=getContext();const msg=statement(cl,k,new Date());
-      if(typeof window.prepareReceiptV25==='function')window.prepareReceiptV25(cl,msg,'Extrato preparado. Nenhum pagamento foi registrado e a mensagem ainda precisa ser enviada.');
-      else openModal(`<h2>Extrato para copiar</h2><textarea readonly rows="14" id="v29StatementText">${esc(msg)}</textarea>`,()=>{
-        document.getElementById('v29StatementText').select();
-      });
+      const phone=String(cl.phone||'').replace(/\D/g,'');
+      if(phone.length>=10&&typeof window.prepareReceiptV25==='function'){
+        window.prepareReceiptV25(cl,msg,'Extrato preparado. Nenhum pagamento foi registrado e a mensagem ainda precisa ser enviada.');
+      }else{
+        openModal(`<h2>Extrato para copiar</h2><p class="muted">Cadastre um telefone com DDD para abrir o WhatsApp.</p><textarea readonly rows="14" id="v29StatementText">${esc(msg)}</textarea><div class="actions"><button type="button" class="soft-btn" id="v29CopyStatement">Copiar extrato</button></div>`,()=>{
+          document.getElementById('v29CopyStatement').onclick=async()=>{
+            const field=document.getElementById('v29StatementText');
+            try{await navigator.clipboard.writeText(field.value)}
+            catch(_){field.focus();field.select();}
+          };
+        });
+      }
     };
     grid.append(inc,st);
     const [y,m]=String(context?.ref||'').split('-').map(Number);
