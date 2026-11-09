@@ -134,14 +134,14 @@
       PaymentMethods.bind('v21');
       const month=document.getElementById('v21PartialRef'),amount=document.getElementById('v21PartialAmount');
       function refresh(){
-        const valid=/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value),[y,m]=month.value.split('-').map(Number),charge=valid?chargeFor(cl,k,y,m-1):null;
+        const valid=/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value),[y,m]=month.value.split('-').map(Number),charge=valid?chargeFor(cl,k,y,m-1,document.getElementById('v21Date')?.value):null;
         document.getElementById('v21PartialDue').textContent=charge?`Vencimento ${charge.due.toLocaleDateString('pt-BR')}`:'Selecione o mês da cobrança.';
         document.getElementById('v21PartialTotal').textContent=brl(charge?.amount);
         document.getElementById('v21PartialPaid').textContent=brl(charge?.paid);
         document.getElementById('v21PartialRemaining').textContent=brl(Math.max(0,Math.round(((charge?.remaining||0)-(Number(amount.value)||0))*100)/100));
         amount.max=String(charge?.remaining||0);
       }
-      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;refresh();
+      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;document.getElementById('v21Date').onchange=refresh;refresh();
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,month.value||ref);
       document.getElementById('v21ConfirmPartial').onclick=async e=>{
         const button=e.currentTarget;if(button.disabled)return;button.disabled=true;try{
