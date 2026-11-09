@@ -108,7 +108,7 @@
     return contractBlockV25(cl,k,'Comprovante de Pagamento')+`\n\n`+
       `✅ Valor pago: ${moneyV25(p?.amount||0)}\n`+
       `📅 Data do pagamento: ${fmtDateV25(p?.paidAt)}\n`+
-      `💳 Forma de pagamento: ${p?.method||'Não informada'}\n`+
+      PaymentMethods.receipt(p)+
       `🗓️ Referência: ${p?.reference||'—'}\n`+
       latePaymentReferenceV25(cl,k,p)+
       `✅ Status: Pago`+(p?.note?`\n📝 Observação: ${p.note}`:'');
@@ -121,6 +121,7 @@
       `💰 Valor amortizado: ${moneyV25(m?.amount||0)}\n`+
       `💳 Novo saldo: *${moneyV25(m?.balanceAfter ?? balanceV25(k))}*\n`+
       `📅 Data da amortização: ${fmtDateV25(m?.date)}\n`+
+      PaymentMethods.receipt(m)+
       `✅ Status: Amortização registrada`+(m?.note?`\n📝 Observação: ${m.note}`:'');
   }
 
@@ -132,6 +133,7 @@
       `💵 Total pago: *${moneyV25(p?.amount||0)}*\n`+
       `📅 Data da quitação: ${fmtDateV25(p?.paidAt)}\n`+
       `💳 Saldo final: ${moneyV25(0)}\n`+
+      PaymentMethods.receipt(p)+
       `✅ Status: *QUITADO*`+(p?.note?`\n📝 Observação: ${p.note}`:'');
   }
 

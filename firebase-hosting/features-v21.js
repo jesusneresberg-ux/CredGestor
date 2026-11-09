@@ -98,7 +98,8 @@
       return true;
     }catch(error){Object.keys(k).forEach(key=>delete k[key]);Object.assign(k,previous);throw error;}
   }
-  function registerParcelV21(cl,k,ref,amount,paidAt,method,note,referenceDate,partial=false,attachment=null){
+  function registerParcelV21(cl,k,ref,amount,paidAt,method,note,referenceDate,partial=false,attachment=null,paymentDetails={}){
+    const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false){alert('Este empréstimo está encerrado.');return null}
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(ref)){alert('Informe um mês de referência válido.');return null}
     const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1);
@@ -108,14 +109,14 @@
     if(cents>remainingCents||remainingCents===0){alert(`O saldo restante deste mês é ${brl(charge.remaining)}. Informe um valor até esse saldo.`);return null}
     const remainingForMonth=(remainingCents-cents)/100;
     const previous=JSON.parse(JSON.stringify(k));
-    const payment={referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
+    const payment={...paymentMeta,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
     payment.dueDateAtPayment=ymd(charge.due);
     if(attachment)payment.receivedReceipt=attachment;
     k.payments=k.payments||[];k.payments.push(payment);k.updatedAt=new Date().toISOString();saveFinancialEventV21(cl,k,'payments',payment.id,previous);return payment;
   }
 
   function advanceReceiptV21(cl,k,p){
-    return `🧾 *Comprovante de Adiantamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${loanCodeV21(k)}\n🗓️ Mês de referência: ${p.reference}\n📅 Data: ${fmtDateV21(p.paidAt)}\n💳 Forma: ${p.method}\n💰 Adiantamento recebido: ${brl(p.amount)}\n✅ Total pago no mês: ${brl(p.paidForMonthAfter)}\n\n📌 *RESTANTE PARA QUITAR O MÊS: ${brl(p.remainingForMonth)}*\n${p.remainingForMonth>0?'⏳ Mês ainda não quitado.':'✅ Mês quitado.'}`;
+    return `🧾 *Comprovante de Adiantamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${loanCodeV21(k)}\n🗓️ Mês de referência: ${p.reference}\n📅 Data: ${fmtDateV21(p.paidAt)}\n${PaymentMethods.receipt(p)}💰 Adiantamento recebido: ${brl(p.amount)}\n✅ Total pago no mês: ${brl(p.paidForMonthAfter)}\n\n📌 *RESTANTE PARA QUITAR O MÊS: ${brl(p.remainingForMonth)}*\n${p.remainingForMonth>0?'⏳ Mês ainda não quitado.':'✅ Mês quitado.'}`;
   }
 
   function showAdvanceReceiptV21(cl,k,p){
@@ -130,6 +131,7 @@
   function openPartialV21(clientId,contractId,ref){
     const cl=state.clients.find(x=>x.id===clientId),k=cl?.contracts?.find(x=>x.id===contractId);if(!k)return;
     openModal(`<h2>Pagamento parcial</h2><div class="muted">${esc(cl.name)} • ${esc(loanCodeV21(k))}</div><div class="field"><label>Mês de referência</label><input id="v21PartialRef" type="month" value="${esc(ref)}"></div><div class="card"><div class="muted" id="v21PartialDue"></div><div class="v21-summary"><div><small>Valor do mês</small><strong id="v21PartialTotal"></strong></div><div><small>Já pago neste mês</small><strong id="v21PartialPaid"></strong></div><div class="v21-total"><small>Restante após este adiantamento</small><strong id="v21PartialRemaining"></strong></div></div></div><div class="field"><label>Valor deste adiantamento</label><input id="v21PartialAmount" type="number" step="0.01" min="0.01" inputmode="decimal"></div>${basePaymentFieldsV21({paidAt:ymd(new Date())})}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmPartial">Registrar e enviar adiantamento</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div><div class="rule-note">O adiantamento é somado aos pagamentos do mês escolhido. Disponível antes ou depois do vencimento.</div>`,()=>{
+      PaymentMethods.bind('v21');
       const month=document.getElementById('v21PartialRef'),amount=document.getElementById('v21PartialAmount');
       function refresh(){
         const valid=/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value),[y,m]=month.value.split('-').map(Number),charge=valid?chargeFor(cl,k,y,m-1):null;
@@ -143,23 +145,25 @@
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,month.value||ref);
       document.getElementById('v21ConfirmPartial').onclick=async e=>{
         const button=e.currentTarget;if(button.disabled)return;button.disabled=true;try{
-        const p=registerParcelV21(cl,k,month.value,Number(amount.value),document.getElementById('v21Date').value||ymd(new Date()),document.getElementById('v21Method').value,document.getElementById('v21Note').value.trim(),undefined,true);
+        const p=registerParcelV21(cl,k,month.value,Number(amount.value),document.getElementById('v21Date').value||ymd(new Date()),document.getElementById('v21Method').value,document.getElementById('v21Note').value.trim(),undefined,true,null,PaymentMethods.read('v21'));
         if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();showAdvanceReceiptV21(cl,k,p);
         }catch(error){alert(error.message);}finally{button.disabled=false;}
       };
     });
   }
-  function registerAmortizationV21(cl,k,amount,date,note){
+  function registerAmortizationV21(cl,k,amount,date,note,method,paymentDetails={}){
+    const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     const before=currentBalanceV21(k);if(!Number.isFinite(amount)||amount<=0||amount>=before)return null;const after=Math.max(0,Math.round((before-amount)*100)/100),previous=JSON.parse(JSON.stringify(k));
-    const movement={id:uid('mv'),type:'amortization',amount,date,note:note||'Amortização de capital',balanceBefore:before,balanceAfter:after,createdAt:new Date().toISOString()};
+    const movement={...paymentMeta,method,id:uid('mv'),type:'amortization',amount,date,note:note||'Amortização de capital',balanceBefore:before,balanceAfter:after,createdAt:new Date().toISOString()};
     k.movements=k.movements||[];k.movements.push(movement);k.currentPrincipal=after;k.lastBalanceUpdate=date;k.updatedAt=new Date().toISOString();saveFinancialEventV21(cl,k,'movements',movement.id,previous);return movement;
   }
-  function settleTotalV21(cl,k,paidAt,method,note){
+  function settleTotalV21(cl,k,paidAt,method,note,paymentDetails={}){
+    const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false||isPaidContract(k))return null;
     const q=payoffQuoteV21(k),ref=String(monthRef());if(q.total<=0)return null;const previous=JSON.parse(JSON.stringify(k));
-    const payment={id:uid('py'),reference:ref,amount:q.total,principalAmount:q.principal,interestAmount:q.interest,paidAt,method,note,status:'paid',type:'payoff',payoff:true,createdAt:new Date().toISOString()};
+    const payment={...paymentMeta,id:uid('py'),reference:ref,amount:q.total,principalAmount:q.principal,interestAmount:q.interest,paidAt,method,note,status:'paid',type:'payoff',payoff:true,createdAt:new Date().toISOString()};
     k.payments=k.payments||[];k.payments.push(payment);
-    if(q.principal>0){k.movements=k.movements||[];k.movements.push({id:uid('mv'),type:'amortization',amount:q.principal,date:paidAt,note:'Quitação total do capital',balanceBefore:q.principal,balanceAfter:0,payoff:true,createdAt:new Date().toISOString()})}
+    if(q.principal>0){k.movements=k.movements||[];k.movements.push({...paymentMeta,method,id:uid('mv'),type:'amortization',amount:q.principal,date:paidAt,note:'Quitação total do capital',balanceBefore:q.principal,balanceAfter:0,payoff:true,createdAt:new Date().toISOString()})}
     const firstDue=firstDueV21(k);
     k.currentPrincipal=0;k.active=false;k.status='paid';k.loanStatus='paid';k.closed=true;k.closedAt=paidAt;k.paidOffAt=paidAt;k.paidOffEarly=!!firstDue&&paidAt<firstDue;k.closedReason=k.paidOffEarly?'Quitação antecipada — capital + juros':'Quitação total — capital + juros';k.lastBalanceUpdate=paidAt;k.nextDueDate='';k.notificationsDisabled=true;k.updatedAt=new Date().toISOString();
     saveFinancialEventV21(cl,k,'payments',payment.id,previous);return payment;
@@ -167,7 +171,7 @@
   window.settleTotalV21=settleTotalV21;
 
   function basePaymentFieldsV21(existing={}){
-    return `<div class="field"><label>Data</label><input id="v21Date" type="date" value="${esc(existing.paidAt||todayISO())}"></div><div class="field"><label>Forma de pagamento</label><select id="v21Method"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Cartão</option><option>Outro</option></select></div><div class="field"><label>Observação</label><textarea id="v21Note">${esc(existing.note||'')}</textarea></div>`;
+    return `<div class="field"><label>Data</label><input id="v21Date" type="date" value="${esc(existing.paidAt||todayISO())}"></div>${PaymentMethods.fields('v21',existing)}<div class="field"><label>Observação</label><textarea id="v21Note">${esc(existing.note||'')}</textarea></div>`;
   }
   function pendingChargesV21(cl,k){
     const first=firstPaymentDate(k)||new Date(),today=nowDayV21(),start=first.getFullYear()*12+first.getMonth(),end=Math.max(start,today.getFullYear()*12+today.getMonth())+1;
@@ -198,26 +202,28 @@
   function openParcelV21(clientId,contractId,ref,existing,charge){
     const cl=state.clients.find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;
     openModal(`<h2>Pagar Parcela</h2><div class="card"><div class="muted">Referência ${esc(ref)} • vencimento ${charge.due.toLocaleDateString('pt-BR')}</div><strong style="font-size:26px">${brl(charge.remaining)}</strong><div class="muted">Restante para quitar o mês • já pago: ${brl(charge.paid)}</div></div><div class="field"><label>Mês de referência</label><input id="v21Ref" value="${esc(ref)}" pattern="\\d{4}-\\d{2}"></div><div class="field" id="v27ReferenceField" hidden><label>Data de referência da cobrança em atraso (vencimento original)</label><input id="v27ReferenceDate" type="date" required value="${esc(existing?.referenceDate||[(charge.originalDue||charge.due).getFullYear(),String((charge.originalDue||charge.due).getMonth()+1).padStart(2,'0'),String((charge.originalDue||charge.due).getDate()).padStart(2,'0')].join('-'))}" ${existing?.referenceDate?'readonly':''}><small>Preservada no pagamento mesmo após atraso ou renegociação.</small></div><div class="field"><label>Valor pago</label><input id="v21Amount" type="number" step="0.01" min="0.01" value="${Number(charge.remaining).toFixed(2)}"></div>${basePaymentFieldsV21()}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmParcel">Confirmar e enviar comprovante</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div>`,()=>{
-      if(existing?.method)document.getElementById('v21Method').value=existing.method;
+      PaymentMethods.bind('v21');
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,ref);
       const referenceField=document.getElementById('v27ReferenceField'),paidDateField=document.getElementById('v21Date'),referenceDateField=document.getElementById('v27ReferenceDate');function showLateReference(){const refValue=document.getElementById('v21Ref').value;const parts=refValue.split('-').map(Number);const actual=parts[0]&&parts[1]?chargeFor(cl,k,parts[0],parts[1]-1):null;referenceField.hidden=!(actual&&paidDateField.value>ymd(actual.due));}paidDateField.addEventListener('change',showLateReference);referenceDateField.addEventListener('change',showLateReference);showLateReference();
-      document.getElementById('v21ConfirmParcel').onclick=async e=>{const button=e.currentTarget;if(button.disabled)return;button.disabled=true;button.textContent='Salvando pagamento…';try{const amount=Number(document.getElementById('v21Amount').value)||0;if(amount<=0){alert('Informe um valor maior que zero.');return}const input={reference:document.getElementById('v21Ref').value.trim()||ref,amount,paidAt:document.getElementById('v21Date').value||todayISO(),method:document.getElementById('v21Method').value||'PIX',note:document.getElementById('v21Note').value.trim()};input.referenceDate=document.getElementById('v27ReferenceDate').value;if(!input.referenceDate){alert('Informe a data de referência da cobrança.');return}const p=registerParcelV21(cl,k,input.reference,input.amount,input.paidAt,input.method,input.note,input.referenceDate);if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();if(p.remainingForMonth>0)showAdvanceReceiptV21(cl,k,p);else sendWhatsAppV21(cl,paymentReceiptV21(cl,k,p),'Pagamento registrado.');}catch(e){alert(e.message);}finally{button.disabled=false;button.textContent='Confirmar e enviar comprovante';}};
+      document.getElementById('v21ConfirmParcel').onclick=async e=>{const button=e.currentTarget;if(button.disabled)return;button.disabled=true;button.textContent='Salvando pagamento…';try{const amount=Number(document.getElementById('v21Amount').value)||0;if(amount<=0){alert('Informe um valor maior que zero.');return}const input={reference:document.getElementById('v21Ref').value.trim()||ref,amount,paidAt:document.getElementById('v21Date').value||todayISO(),method:document.getElementById('v21Method').value||'PIX',note:document.getElementById('v21Note').value.trim()};input.referenceDate=document.getElementById('v27ReferenceDate').value;if(!input.referenceDate){alert('Informe a data de referência da cobrança.');return}const p=registerParcelV21(cl,k,input.reference,input.amount,input.paidAt,input.method,input.note,input.referenceDate,false,null,PaymentMethods.read('v21'));if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();if(p.remainingForMonth>0)showAdvanceReceiptV21(cl,k,p);else sendWhatsAppV21(cl,paymentReceiptV21(cl,k,p),'Pagamento registrado.');}catch(e){alert(e.message);}finally{button.disabled=false;button.textContent='Confirmar e enviar comprovante';}};
     });
   }
   function openAmortizeV21(clientId,contractId,ref){
     const cl=state.clients.find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;const before=currentBalanceV21(k);
     openModal(`<h2>Amortizar Capital</h2><div class="card"><div class="muted">Capital antes da amortização</div><strong style="font-size:26px">${brl(before)}</strong><div class="muted" style="margin-top:4px">Juros atuais: ${brl(currentInterestV21(k))}</div></div><div class="field"><label>Valor a amortizar</label><input id="v21Amount" type="number" step="0.01" min="0.01" max="${Math.max(0,before-0.01).toFixed(2)}"></div><div class="card"><div class="muted">Novo capital</div><strong id="v21NewBalance" style="font-size:24px">${brl(before)}</strong><div class="muted" id="v21NewInterest">Novos juros: ${brl(currentInterestV21(k))}</div></div>${basePaymentFieldsV21()}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmAmort">Confirmar amortização</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div><div class="rule-note">A amortização reduz o capital. As cobranças de juros usam o saldo atualizado; parcelas fixas continuam devidas até seu pagamento. Para baixar a parcela, use Pagar Parcela.</div>`,()=>{
+      PaymentMethods.bind('v21');
       const amount=document.getElementById('v21Amount'),newBal=document.getElementById('v21NewBalance'),newInt=document.getElementById('v21NewInterest');
       amount.oninput=()=>{const a=Math.max(0,Number(amount.value)||0),b=Math.max(0,before-a),i=k.billingType==='interest'?b*(Number(k.interestRate)||0)/100:currentInterestV21({...k,currentPrincipal:b,initialPrincipal:b,movements:[]});newBal.textContent=brl(b);newInt.textContent=`Novos juros: ${brl(i)}`};
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,ref);
-      document.getElementById('v21ConfirmAmort').onclick=async()=>{try{const a=Number(amount.value)||0;if(a<=0||a>=before){alert(`Para amortização, informe um valor menor que ${brl(before)}. Para zerar o contrato, use “Quitar Capital + Juros”.`);return}const mov=registerAmortizationV21(cl,k,a,document.getElementById('v21Date').value||todayISO(),document.getElementById('v21Note').value.trim());if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();sendWhatsAppV21(cl,amortizationReceiptV21(cl,k,mov),'Amortização salva. Capital reduzido; confira as parcelas ainda devidas em Cobranças.');}catch(e){alert(e.message);}};
+      document.getElementById('v21ConfirmAmort').onclick=async()=>{try{const a=Number(amount.value)||0;if(a<=0||a>=before){alert(`Para amortização, informe um valor menor que ${brl(before)}. Para zerar o contrato, use “Quitar Capital + Juros”.`);return}const mov=registerAmortizationV21(cl,k,a,document.getElementById('v21Date').value||todayISO(),document.getElementById('v21Note').value.trim(),document.getElementById('v21Method').value,PaymentMethods.read('v21'));if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();sendWhatsAppV21(cl,amortizationReceiptV21(cl,k,mov),'Amortização salva. Capital reduzido; confira as parcelas ainda devidas em Cobranças.');}catch(e){alert(e.message);}};
     });
   }
   function openPayoffV21(clientId,contractId,ref){
     const cl=state.clients.find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;const q=payoffQuoteV21(k);
     openModal(`<h2>Quitar Capital + Juros</h2><div class="card"><div class="muted">Confira os valores antes de confirmar.</div><div class="v21-summary"><div><small>Capital restante</small><strong>${brl(q.principal)}</strong></div><div><small>Juros</small><strong>${brl(q.interest)}</strong></div><div class="v21-total"><small>Total a pagar</small><strong>${brl(q.total)}</strong></div><div class="v21-total"><small>Saldo após a quitação</small><strong class="v21-zero">${brl(0)}</strong></div></div></div>${basePaymentFieldsV21()}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmPayoff">Quitar e dar baixa</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div><div class="rule-note">A confirmação encerra o contrato, zera o capital e impede novas cobranças e notificações deste empréstimo.</div>`,()=>{
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,ref);
-      document.getElementById('v21ConfirmPayoff').onclick=async()=>{try{if(q.total<=0){alert('Este contrato já está sem saldo.');return}if(!confirm(`Confirmar pagamento total de ${brl(q.total)}?`))return;const p=settleTotalV21(cl,k,document.getElementById('v21Date').value||todayISO(),document.getElementById('v21Method').value||'PIX',document.getElementById('v21Note').value.trim());if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();sendWhatsAppV21(cl,payoffReceiptV21(cl,k,p),'Empréstimo quitado e baixado.');}catch(e){alert(e.message);}};
+      PaymentMethods.bind('v21');
+      document.getElementById('v21ConfirmPayoff').onclick=async()=>{try{if(q.total<=0){alert('Este contrato já está sem saldo.');return}if(!confirm(`Confirmar pagamento total de ${brl(q.total)}?`))return;const p=settleTotalV21(cl,k,document.getElementById('v21Date').value||todayISO(),document.getElementById('v21Method').value||'PIX',document.getElementById('v21Note').value.trim(),PaymentMethods.read('v21'));if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();sendWhatsAppV21(cl,payoffReceiptV21(cl,k,p),'Empréstimo quitado e baixado.');}catch(e){alert(e.message);}};
     });
   }
 
@@ -232,8 +238,8 @@
 
   function timelineV21(cl){
     const rows=[];(cl.contracts||[]).forEach(k=>{
-      (k.payments||[]).forEach(p=>rows.push({date:p.paidAt||p.createdAt?.slice(0,10)||'',kind:p.payoff?'Quitação total':p.type==='partial'?'Adiantamento':'Pagamento',amount:Number(p.amount)||0,text:`${loanCodeV21(k)}${p.reference?` • ref. ${p.reference}`:''}${p.payoff?` • capital ${brl(p.principalAmount||0)} + juros ${brl(p.interestAmount||0)}`:''}`}));
-      (k.movements||[]).forEach(m=>rows.push({date:m.date||m.createdAt?.slice(0,10)||'',kind:m.type==='increase'?'Acréscimo':'Amortização',amount:Number(m.amount)||0,text:`${loanCodeV21(k)}${Number.isFinite(Number(m.balanceAfter))?` • saldo após ${brl(m.balanceAfter)}`:''}`}));
+      (k.payments||[]).forEach(p=>rows.push({date:p.paidAt||p.createdAt?.slice(0,10)||'',kind:p.payoff?'Quitação total':p.type==='partial'?'Adiantamento':'Pagamento',amount:Number(p.amount)||0,text:`${loanCodeV21(k)}${p.reference?` • ref. ${p.reference}`:''}${p.method?` • ${p.method}`:''}${p.paymentDetails?` • ${p.paymentDetails}`:''}${p.payoff?` • capital ${brl(p.principalAmount||0)} + juros ${brl(p.interestAmount||0)}`:''}`}));
+      (k.movements||[]).forEach(m=>rows.push({date:m.date||m.createdAt?.slice(0,10)||'',kind:m.type==='increase'?'Acréscimo':'Amortização',amount:Number(m.amount)||0,text:`${loanCodeV21(k)}${m.method?` • ${m.method}`:''}${m.paymentDetails?` • ${m.paymentDetails}`:''}${Number.isFinite(Number(m.balanceAfter))?` • saldo após ${brl(m.balanceAfter)}`:''}`}));
       if(k.closedAt)rows.push({date:k.closedAt,kind:'Contrato encerrado',amount:0,text:`${loanCodeV21(k)} • ${k.closedReason||'Encerrado'}`});
     });
     return rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.kind).localeCompare(String(b.kind)));
