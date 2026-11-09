@@ -51,8 +51,8 @@
     const first=firstPaymentDate(k);if(!first)return [];
     const refs=new Set(Object.keys(k.dueDateOverrides||{})),last=closing.getFullYear()*12+closing.getMonth();
     for(let i=first.getFullYear()*12+first.getMonth();i<=last;i++)refs.add(`${Math.floor(i/12)}-${String(i%12+1).padStart(2,'0')}`);
-    return [...refs].filter(ref=>ref!==currentRef).map(ref=>{const [y,m]=ref.split('-').map(Number);return chargeFor(cl,k,y,m-1)})
-      .filter(x=>x.status!=='not_due'&&x.remaining>0&&ymd(x.originalDue||x.due)<=ymd(closing))
+    return [...refs].filter(ref=>ref!==currentRef).map(ref=>{const [y,m]=ref.split('-').map(Number);return chargeFor(cl,k,y,m-1,closing)})
+      .filter(x=>x.status!=='not_due'&&x.remaining>0&&ymd(x.due)<=ymd(closing))
       .sort((a,b)=>(a.originalDue||a.due)-(b.originalDue||b.due)||a.ref.localeCompare(b.ref));
   }
 
@@ -62,7 +62,7 @@
     const period=currentPeriod(k,closing),periodDays=Math.max(1,days(period.from,period.to)),elapsed=Math.min(periodDays,Math.max(0,days(period.from,closing)));
     const monthly=cents(monthlyDue(k)),paidCurrent=cents(paymentTotalForMonth(k,period.ref));
     const accrued=Math.round(monthly*elapsed/periodDays),proportional=Math.max(0,accrued-paidCurrent);
-    const overdue=overdueCharges(cl,k,closing,period.ref).map(x=>({ref:x.ref,due:x.originalDue||x.due,remaining:cents(x.remaining),amount:cents(x.amount),paid:cents(x.paid)}));
+    const overdue=overdueCharges(cl,k,closing,period.ref).map(x=>({ref:x.ref,due:x.due,remaining:cents(x.remaining),amount:cents(x.amount),paid:cents(x.paid)}));
     const overdueTotal=overdue.reduce((t,x)=>t+x.remaining,0),principal=cents(contractBalance(k));
     return {closing,closingISO,period,periodDays,elapsed,monthly,paidCurrent,accrued,proportional,overdue,overdueTotal,principal,interest:overdueTotal+proportional,total:principal+overdueTotal+proportional,rate:Number(k.interestRate)||0,billingType:k.billingType};
   }

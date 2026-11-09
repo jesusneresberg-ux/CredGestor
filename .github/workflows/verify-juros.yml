@@ -1,0 +1,24 @@
+name: Validar juros diarios e extratos
+on:
+  push:
+    branches: ['feat/pagamentos-edicao-juros-diarios-20261108']
+  pull_request:
+    paths:
+      - 'firebase-hosting/features-v29.js'
+      - 'firebase-hosting/features-v21.js'
+      - 'tests/juros-atraso-diarios.cjs'
+jobs:
+  unitarios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar sintaxe
+        run: |
+          node --check firebase-hosting/features-v29.js
+          node --check firebase-hosting/features-v21.js
+          node --check firebase-hosting/early-close.js
+      - name: Testar juros de atraso
+        run: node tests/juros-atraso-diarios.cjs

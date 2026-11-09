@@ -21,7 +21,7 @@
     try{localStorage.setItem(KEY,raw);}catch(_){throw Error('Falta espaço no aparelho para a carteira. A cópia original permanece na nuvem.');}
   }
   async function launch(){
-    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=payment-methods15';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
+    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=juros-diarios16';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
     document.getElementById('accountQuickBtn').onclick=openAccount;
     const original=renderSettings;renderSettings=function(){const out=original();const section=document.createElement('div');section.className='card';section.innerHTML='<h2>Minha conta</h2><p>Entrada automática com sua Conta Google.</p><button id="personalSettingsAccount" class="soft-btn" type="button">Minha conta e backup</button>';document.getElementById('view').prepend(section);section.querySelector('button').onclick=openAccount;return out;};
     if(currentView==='settings')renderSettings();

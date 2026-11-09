@@ -102,14 +102,14 @@
     const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false){alert('Este empréstimo está encerrado.');return null}
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(ref)){alert('Informe um mês de referência válido.');return null}
-    const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1);
+    const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1,paidAt);
     const cents=Math.round(Number(amount)*100),remainingCents=Math.round(charge.remaining*100);
     if(charge.status==='not_due'||charge.amount<=0){alert('Escolha um mês a partir do primeiro vencimento do empréstimo.');return null}
     if(!Number.isFinite(cents)||cents<=0){alert('Informe um valor maior que zero.');return null}
     if(cents>remainingCents||remainingCents===0){alert(`O saldo restante deste mês é ${brl(charge.remaining)}. Informe um valor até esse saldo.`);return null}
     const remainingForMonth=(remainingCents-cents)/100;
     const previous=JSON.parse(JSON.stringify(k));
-    const payment={...paymentMeta,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
+    const payment={...paymentMeta,lateInterestAccrued:charge.lateInterest||0,lateInterestDays:charge.lateDays||0,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
     payment.dueDateAtPayment=ymd(charge.due);
     if(attachment)payment.receivedReceipt=attachment;
     k.payments=k.payments||[];k.payments.push(payment);k.updatedAt=new Date().toISOString();saveFinancialEventV21(cl,k,'payments',payment.id,previous);return payment;
@@ -134,14 +134,14 @@
       PaymentMethods.bind('v21');
       const month=document.getElementById('v21PartialRef'),amount=document.getElementById('v21PartialAmount');
       function refresh(){
-        const valid=/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value),[y,m]=month.value.split('-').map(Number),charge=valid?chargeFor(cl,k,y,m-1):null;
+        const valid=/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value),[y,m]=month.value.split('-').map(Number),charge=valid?chargeFor(cl,k,y,m-1,document.getElementById('v21Date')?.value):null;
         document.getElementById('v21PartialDue').textContent=charge?`Vencimento ${charge.due.toLocaleDateString('pt-BR')}`:'Selecione o mês da cobrança.';
         document.getElementById('v21PartialTotal').textContent=brl(charge?.amount);
         document.getElementById('v21PartialPaid').textContent=brl(charge?.paid);
         document.getElementById('v21PartialRemaining').textContent=brl(Math.max(0,Math.round(((charge?.remaining||0)-(Number(amount.value)||0))*100)/100));
         amount.max=String(charge?.remaining||0);
       }
-      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;refresh();
+      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;document.getElementById('v21Date').onchange=refresh;refresh();
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,month.value||ref);
       document.getElementById('v21ConfirmPartial').onclick=async e=>{
         const button=e.currentTarget;if(button.disabled)return;button.disabled=true;try{
