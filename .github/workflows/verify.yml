@@ -19,3 +19,4 @@ jobs:
       - run: node tests/payment-history.cjs
       - run: node tests/early-close.cjs
       - run: node tests/payment-methods.cjs
+      - run: node tests/juros-atraso-diarios.cjs
