@@ -48,7 +48,7 @@ const fixtures=['parcel','partial','payoff','amort','early','other','switch'].ma
       const p=(await info('partial')).k.payments[0];assert.equal(p.remainingForMonth,700);assert.equal(p.settlementInKind,true);
     });
     await check('Quitação encerra contrato e identifica recebimento em bem',async()=>{
-      await open('payoff','#v21Payoff');await penhora();await page.locator('#v21ConfirmPayoff').click();await page.waitForSelector('#receiptTextV25');
+      await open('payoff','#v21Payoff');await penhora('ec');await page.locator('#ecConfirm').click();await page.waitForSelector('#receiptTextV25');
       assert.match(await page.locator('#receiptTextV25').inputValue(),/Pagamento com penhora[\s\S]*Bem recebido: Chácara/);
       const x=await info('payoff');assert.equal(x.balance,0);assert.equal(x.k.active,false);assert.equal(x.k.payments[0].settlementInKind,true);
     });
