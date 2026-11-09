@@ -7,7 +7,7 @@
   client.contracts.push(loan);
   const dollars=n=>Math.round(n*100)/100;
   const context={
-    window:{},state:{clients:[client]},Date,Math,console,
+    window:{},state:{clients:[client]},Date,Math,console,document:{getElementById(){return null;}},
     openModal(){},isPaidContract:k=>k.active===false,contractBalance:k=>k.initialPrincipal,monthlyDue:k=>k.initialPrincipal*k.interestRate/100,
     firstPaymentDate(){return new Date(2026,10,7,12)},brl:n=>'R$ '+dollars(n).toFixed(2),
     ymd:d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
