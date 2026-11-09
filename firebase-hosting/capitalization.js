@@ -1,4 +1,4 @@
-/* Incorporação única autorizada em 09/11/2026. Não registra recebimento nem liberação. */
+/* Compatibilidade histórica e estorno da atualização automática, sem registrar recebimentos. */
 (function(){
   'use strict';
   const BATCH='capitalizacao-atrasos-2026-11-09',DATE='2026-11-09';
@@ -24,51 +24,34 @@
     }
     return rawCharge(cl,k,y,m,asOf);
   };
-  function plan(){
-    const entries=[],skipped=[];
+  // Mantém o histórico já incorporado, sem executar novas capitalizações.
+  function plan(){return {entries:[],skipped:[]};}
+  function apply(){return null;}
+  function reverseAutomatic(){
+    const reversalId='estorno-'+BATCH;
+    if(state.automaticInterestReversals?.[reversalId])return null;
+    const previous=clone(state),entries=[];
     for(const cl of state.clients||[])for(const k of cl.contracts||[]){
-      if(k.active===false||isPaidContract(k)||contractBalance(k)<=0||!(Number(k.interestRate)>0))continue;
-      if((k.movements||[]).some(v=>v.batchId===BATCH))continue;
-      const first=firstPaymentDate(k);
-      const uncertain=/congelad|congelamento|suspenso|sem juros/i.test([cl.notes,k.notes,k.legacyRaw,k.legacyStatus].filter(Boolean).join(' '))||k.frozen||k.interestFrozen||k.suspended||!['interest','percent'].includes(k.billingType)||!first||!contractStartDate(k)||
-        !Number.isInteger(Number(k.baseDueDay))||Number(k.baseDueDay)<1||Number(k.baseDueDay)>31||
-        (k.movements||[]).some(v=>String(v.date||'')>DATE)||
-        (k.payments||[]).some(v=>String(v.paidAt||v.date||'').slice(0,10)>DATE);
-      if(uncertain){skipped.push({clientId:cl.id,contractId:k.id,reason:'Conferir modalidade, datas, congelamento ou movimentos posteriores à data-base.'});continue;}
-      const from=first.getFullYear()*12+first.getMonth(),to=2026*12+10;
-      if(to-from>1200){skipped.push({clientId:cl.id,contractId:k.id,reason:'Histórico acima do limite de cálculo.'});continue;}
-      let total=0;const snapshots={};
-      for(let i=from;i<=to;i++){
-        const q=chargeFor(cl,k,Math.floor(i/12),i%12,DATE);
-        if(q.status==='not_due'||!q.due||ymd(q.due)>=DATE)continue;
-        const incorporated=cents(q.remaining);
-        snapshots[q.ref]={date:DATE,due:ymd(q.due),originalDue:ymd(q.originalDue||q.due),incorporated:incorporated/100,
-          quote:{amount:q.amount,baseAmount:q.baseAmount,lateInterest:q.lateInterest,lateDays:q.lateDays,paid:q.paid,status:q.status}};
-        total+=incorporated;
-      }
-      if(total>0)entries.push({cl,k,amount:total/100,before:contractBalance(k),snapshots});
+      const movements=(k.movements||[]).filter(v=>v.batchId===BATCH&&v.kind==='interest_capitalization');
+      if(movements.length)entries.push({cl,k,movements});
     }
-    return {entries,skipped};
-  }
-  function apply(){
-    if(todayISO()<DATE||state.capitalizationBatches?.[BATCH])return null;
-    const {entries,skipped}=plan(),previous=clone(state);
-    // Cópia integral persistida antes da primeira alteração; falha de espaço impede a operação.
-    const recoveryKey='credigestor_recovery_'+BATCH;
+    if(!entries.length)return null;
+    // Cópia antes de remover apenas movimentos identificados da atualização.
+    const recoveryKey='credigestor_recovery_'+reversalId;
     if(!localStorage.getItem(recoveryKey))localStorage.setItem(recoveryKey,JSON.stringify(previous));
     try{
-      for(const {k,amount,before,snapshots} of entries){
-        k.capitalizedCharges={...k.capitalizedCharges,...snapshots};
-        k.movements=k.movements||[];
-        k.movements.push({id:BATCH+'_'+k.id,batchId:BATCH,type:'increase',kind:'interest_capitalization',nonCash:true,
-          amount,date:DATE,balanceBefore:before,balanceAfter:(cents(before)+cents(amount))/100,
-          note:'Juros vencidos e proporcionais incorporados ao capital em 09/11/2026. Sem recebimento ou nova liberação.',createdAt:new Date().toISOString()});
-        k.currentPrincipal=contractBalance(k);k.lastBalanceUpdate=DATE;k.updatedAt=new Date().toISOString();
+      let total=0;
+      for(const {k,movements} of entries){
+        k.movements=k.movements.filter(v=>!movements.includes(v));
+        for(const [ref,snapshot] of Object.entries(k.capitalizedCharges||{}))if(snapshot.date===DATE)delete k.capitalizedCharges[ref];
+        total+=movements.reduce((sum,v)=>sum+cents(v.amount),0);
+        k.currentPrincipal=contractBalance(k);k.updatedAt=new Date().toISOString();
       }
-      const summary={date:DATE,contracts:entries.length,total:entries.reduce((s,v)=>s+cents(v.amount),0)/100,skipped};
-      state.capitalizationBatches={...state.capitalizationBatches,[BATCH]:summary};
+      const summary={date:todayISO(),contracts:entries.length,total:total/100,
+        removed:entries.map(({cl,k,movements})=>({clientId:cl.id,contractId:k.id,movements:clone(movements)}))};
+      state.automaticInterestReversals={...state.automaticInterestReversals,[reversalId]:summary};
       saveState();render();return summary;
     }catch(error){Object.keys(state).forEach(key=>delete state[key]);Object.assign(state,previous);throw error;}
   }
-  window.CrediGestorCapitalization={plan,apply,batchId:BATCH};
+  window.CrediGestorCapitalization={plan,apply,reverseAutomatic,batchId:BATCH};
 })();

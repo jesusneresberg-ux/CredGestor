@@ -78,7 +78,7 @@ async function shareBackupDrive3(){
 const CSV_HEADERS3=[
   'tipo_registro','id','cliente_id','cliente_nome','cpf','telefone','email','rua','numero','complemento','bairro','cidade','uf','cep','nivel','limite_credito','observacoes',
   'emprestimo_id','titulo','valor_inicial','saldo_atual','tipo_cobranca','taxa_juros','parcela_fixa','dia_vencimento','data_inicio','ativo','parcelas_anteriores','status_anterior','mes_referencia_anterior','anotacao_anterior',
-  'movimento_id','tipo_movimento','valor_movimento','data_movimento','observacao_movimento','capitalizacoes_json','movimento_capitalizacao_json',
+  'movimento_id','tipo_movimento','valor_movimento','data_movimento','observacao_movimento','capitalizacoes_json','movimento_capitalizacao_json','juros_atraso_manuais_json',
   'pagamento_id','mes_referencia','valor_pago','data_pagamento','observacao_pagamento',
   'garantia_id','tipo_garantia','descricao_garantia','valor_estimado','status_garantia','observacao_garantia',
   'crm_id','tipo_crm','data_crm','observacao_crm',
@@ -90,7 +90,7 @@ function csvRows3(){
   state.clients.forEach(c=>{
     rows.push({tipo_registro:'CLIENTE',id:c.id,...baseClient(c)});
     (c.contracts||[]).forEach(k=>{
-      rows.push({tipo_registro:'EMPRESTIMO',id:k.id,...baseClient(c),emprestimo_id:k.id,titulo:k.title||'',valor_inicial:Number(k.initialPrincipal)||0,saldo_atual:contractBalance(k),tipo_cobranca:k.billingType||'percent',taxa_juros:Number(k.interestRate)||0,parcela_fixa:Number(k.fixedAmount)||0,dia_vencimento:Number(k.baseDueDay)||1,data_inicio:k.startDate||'',ativo:k.active===false?0:1,parcelas_anteriores:k.legacyInstallmentCount??'',status_anterior:k.legacyStatus||'',mes_referencia_anterior:k.legacyReferenceMonth||'',anotacao_anterior:k.legacyRaw||'',capitalizacoes_json:JSON.stringify(k.capitalizedCharges||{})});
+      rows.push({tipo_registro:'EMPRESTIMO',id:k.id,...baseClient(c),emprestimo_id:k.id,titulo:k.title||'',valor_inicial:Number(k.initialPrincipal)||0,saldo_atual:contractBalance(k),tipo_cobranca:k.billingType||'percent',taxa_juros:Number(k.interestRate)||0,parcela_fixa:Number(k.fixedAmount)||0,dia_vencimento:Number(k.baseDueDay)||1,data_inicio:k.startDate||'',ativo:k.active===false?0:1,parcelas_anteriores:k.legacyInstallmentCount??'',status_anterior:k.legacyStatus||'',mes_referencia_anterior:k.legacyReferenceMonth||'',anotacao_anterior:k.legacyRaw||'',capitalizacoes_json:JSON.stringify(k.capitalizedCharges||{}),juros_atraso_manuais_json:JSON.stringify(k.manualLateInterest||[])});
       (k.movements||[]).forEach(m=>rows.push({tipo_registro:'MOVIMENTO',id:m.id,...baseClient(c),emprestimo_id:k.id,movimento_id:m.id,tipo_movimento:m.type||'',valor_movimento:Number(m.amount)||0,data_movimento:m.date||'',observacao_movimento:m.note||'',movimento_capitalizacao_json:m.kind==='interest_capitalization'?JSON.stringify({kind:m.kind,nonCash:true,batchId:m.batchId,balanceBefore:m.balanceBefore,balanceAfter:m.balanceAfter}):''}));
       (k.payments||[]).forEach(p=>rows.push({tipo_registro:'PAGAMENTO',id:p.id,...baseClient(c),emprestimo_id:k.id,pagamento_id:p.id,mes_referencia:p.reference||'',valor_pago:Number(p.amount)||0,data_pagamento:p.paidAt||'',observacao_pagamento:p.note||''}));
     });
@@ -133,6 +133,7 @@ function importStructuredCSV3(rows){
     const loanId=get(row,'emprestimo_id');
     if(type==='EMPRESTIMO'){
       let k=getLoan3(c,loanId);const obj={id:loanId||uid('ct'),title:get(row,'titulo')||'Empréstimo',initialPrincipal:brNumber3(get(row,'valor_inicial')),baseDueDay:Math.max(1,Math.min(31,Number(get(row,'dia_vencimento'))||1)),billingType:get(row,'tipo_cobranca')||'percent',interestRate:brNumber3(get(row,'taxa_juros')),fixedAmount:brNumber3(get(row,'parcela_fixa')),startDate:get(row,'data_inicio')||'',active:get(row,'ativo')!=='0',legacyInstallmentCount:get(row,'parcelas_anteriores')===''?'':Number(get(row,'parcelas_anteriores')),legacyStatus:get(row,'status_anterior')||'',legacyReferenceMonth:get(row,'mes_referencia_anterior')||'',legacyRaw:get(row,'anotacao_anterior')||'',movements:k?.movements||[],payments:k?.payments||[],lateHistory:k?.lateHistory||0,createdAt:k?.createdAt||new Date().toISOString()};
+      if(get(row,'juros_atraso_manuais_json'))obj.manualLateInterest=JSON.parse(get(row,'juros_atraso_manuais_json'));
       if(get(row,'capitalizacoes_json'))obj.capitalizedCharges=JSON.parse(get(row,'capitalizacoes_json'));
       if(k){Object.assign(k,obj);updated++;}else{c.contracts.push(obj);created++;}continue;
     }

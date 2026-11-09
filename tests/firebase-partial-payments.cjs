@@ -35,9 +35,9 @@ const fixtures=[['today','Hoje','2026-09-08',100],['late','Atrasado','2026-09-01
     await page.waitForFunction(()=>window.testBooted);
     for(const id of ['today','late','next'])await check(`Adiantamento ${id}: comprovante resumido, saldo 80 e situação preservada`,async()=>{
       await partial(id,id,20);const receipt=await page.locator('#v21AdvanceReceipt').inputValue();
-      assert.match(receipt,/Comprovante de Adiantamento/);assert.match(receipt,/Adiantamento recebido: R\$\s*20,00/);assert.match(receipt,id==='late'?/\*RESTANTE PARA QUITAR O MÊS: R\$\s*102,58\*/:/\*RESTANTE PARA QUITAR O MÊS: R\$\s*80,00\*/);assert.doesNotMatch(receipt,/Valor Emprestado|Taxa de juros|Status: Pago/);
+      assert.match(receipt,/Comprovante de Adiantamento/);assert.match(receipt,/Adiantamento recebido: R\$\s*20,00/);assert.match(receipt,/\*RESTANTE PARA QUITAR O MÊS: R\$\s*80,00\*/);assert.doesNotMatch(receipt,/Valor Emprestado|Taxa de juros|Status: Pago/);
       assert.equal(await page.evaluate(()=>window.sentReceipts.at(-1)),receipt);
-      const k=await data(id);assert.equal(k.charge.remaining,id==='late'?102.58:80);assert.equal(k.charge.status,id==='late'?'late':'open');assert.equal(k.balance,1000);assert.equal(k.payments.length,1);
+      const k=await data(id);assert.equal(k.charge.remaining,80);assert.equal(k.charge.status,id==='late'?'late':'open');assert.equal(k.balance,1000);assert.equal(k.payments.length,1);
     });
     await check('Segundo adiantamento soma valores e preserva o primeiro registro',async()=>{
       await partial('today','today',30);const receipt=await page.locator('#v21AdvanceReceipt').inputValue();assert.match(receipt,/Total pago no mês: R\$\s*50,00/);assert.match(receipt,/RESTANTE PARA QUITAR O MÊS: R\$\s*50,00/);
@@ -66,7 +66,7 @@ const fixtures=[['today','Hoje','2026-09-08',100],['late','Atrasado','2026-09-01
       const k=await data('cents');assert.equal(k.charge.paid,0.30);assert.equal(k.charge.remaining,0);assert.equal(k.charge.status,'paid');
     });
     await check('Histórico e saldo parcial sobrevivem ao recarregamento',async()=>{
-      await page.reload();await page.waitForFunction(()=>window.testBooted);assert.equal((await data('today')).payments.length,4);assert.equal((await data('late')).charge.remaining,102.58);
+      await page.reload();await page.waitForFunction(()=>window.testBooted);assert.equal((await data('today')).payments.length,4);assert.equal((await data('late')).charge.remaining,80);
       await page.evaluate(()=>openClientDetail('today'));assert.match(await page.locator('#clientHistoryV21').innerText(),/Adiantamento/);
     });
     await check('Quitação de capital mantém juros residuais após adiantamento',async()=>{

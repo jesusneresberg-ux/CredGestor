@@ -7,7 +7,7 @@
   client.contracts.push(loan);
   const dollars=n=>Math.round(n*100)/100;
   const context={
-    window:{},state:{clients:[client]},Date,Math,console,document:{getElementById(){return null;}},
+    uid:()=> 'manual1',saveState(){},window:{},state:{clients:[client]},Date,Math,console,document:{getElementById(){return null;}},
     openModal(){},isPaidContract:k=>k.active===false,contractBalance:k=>k.initialPrincipal,monthlyDue:k=>k.initialPrincipal*k.interestRate/100,
     firstPaymentDate(){return new Date(2026,10,7,12)},brl:n=>'R$ '+dollars(n).toFixed(2),
     ymd:d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
@@ -20,27 +20,23 @@
   };
   vm.createContext(context);vm.runInContext(source,context,{filename:'features-v29.js'});
   const quote=at=>context.chargeFor(client,loan,2026,10,at);
-  assert.equal(quote('2026-11-07').lateInterest,0,'na data de vencimento não há juros adicionais');
-  assert.equal(quote('2026-11-08').lateInterest,3.33,'primeiro dia vencido: R$100 / 30');
-  assert.equal(quote('2026-11-09').lateInterest,6.67,'segundo dia vencido: proporcional simples sem capitalizar');
-  assert.equal(quote('2026-11-08').remaining,103.33);
-  loan.payments.push({reference:'2026-11',amount:50,paidAt:'2026-11-08'});
-  assert.equal(quote('2026-11-09').lateInterest,5,'após pagamento parcial, juros só sobre base ainda pendente');
-  assert.equal(quote('2026-11-09').remaining,55);
-  loan.payments.push({reference:'2026-11',amount:55,paidAt:'2026-11-09'});
-  assert.equal(quote('2026-11-20').lateInterest,5,'pagamento integral congela a cobrança de atraso');
-  assert.equal(quote('2026-11-20').remaining,0);
+  assert.equal(quote('2026-11-08').lateInterest,0);
+  assert.equal(quote('2026-11-09').remaining,100,'atraso não aumenta automaticamente a cobrança');
+  const before=JSON.stringify(loan);
+  assert.throws(()=>context.window.CrediGestorOverdueV29.addManual(client,loan,'2026-11',-1,'2026-11-09'));
+  assert.equal(JSON.stringify(loan),before);
+  context.window.CrediGestorOverdueV29.addManual(client,loan,'2026-11',25,'2026-11-09','Atraso combinado');
+  assert.equal(quote('2026-11-08').remaining,100,'consulta anterior preservada');
+  assert.equal(quote('2026-11-09').remaining,125);
+  assert.equal(quote('2026-11-20').remaining,125,'valor manual não cresce com os dias');
+  assert.equal(loan.initialPrincipal,1000);assert.equal(loan.movements.length,0);
+  loan.payments.push({reference:'2026-11',amount:50,paidAt:'2026-11-10'});
+  assert.equal(quote('2026-11-20').remaining,75);
+  loan.payments.push({reference:'2026-11',amount:75,paidAt:'2026-11-20'});
   assert.equal(quote('2026-11-20').status,'paid');
-  loan.payments=[];
-  assert.equal(quote('2026-11-04').lateInterest,0,'não cobrar antes do vencimento');
-  loan.interestRate=0;
-  assert.equal(quote('2026-11-15').lateInterest,0,'sem taxa contratual não criar multa implícita');
-  loan.interestRate=10;
-  const statement=context.window.CrediGestorOverdueV29.statement(client,loan,'2026-11-08');
-  assert.match(statement,/TOTAL DAS COBRANÇAS EM ABERTO/);
-  assert.match(statement,/Juros proporcionais por atraso: R\$ 3\.33/);
-  assert.match(statement,/O capital informado acima não integra este total/);
-  assert.equal(quote('2026-11-08').daysLate,undefined,'a cobrança expõe lateDays e lateInterest');
-  assert.equal(quote('2026-11-08').lateDays,1);
-  console.log('PASS: cobrança diária a partir do 1º dia, pagamentos parciais, congelamento após baixa e extrato separado de capital');
+  assert.match(context.window.CrediGestorOverdueV29.statement(client,loan,'2026-11-09'),/Juros de atraso lançados manualmente: R\$ 25\.00/);
+  loan.payments=[];const snapshot=JSON.stringify(loan);context.saveState=()=>{throw Error('save failed')};
+  assert.throws(()=>context.window.CrediGestorOverdueV29.addManual(client,loan,'2026-11',10,'2026-11-09'),/save failed/);
+  assert.equal(JSON.stringify(loan),snapshot,'falha ao salvar desfaz o lançamento');
+  console.log('PASS: sem juros automáticos; lançamento manual, datas, pagamentos e falha de gravação.');
 })();

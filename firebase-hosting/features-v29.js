@@ -13,25 +13,12 @@
   const dateISO=v=>{const d=day(v);return d?ymd(d):''};
   const ordinal=d=>Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/MS;
   const matching=(p,ref)=>String(p.reference||p.ref||'')===ref;
+  // Encargos de atraso só existem após lançamento explícito do usuário.
   function accruedLateInterest(k,row,untilValue){
-    const until=day(untilValue),due=day(row.due||row.originalDue),base=cents(row.amount),rate=Number(k.interestRate)||0;
-    if(!until||!due||ordinal(until)<=ordinal(due)||base<=0||rate<=0||isPaidContract(k))return {cents:0,days:0};
-    const paid=(k.payments||[]).filter(p=>matching(p,row.ref)&&cents(p.amount)>0&&day(p.paidAt||p.date))
-      .map(p=>({when:ordinal(day(p.paidAt||p.date)),amount:cents(p.amount)})).sort((a,b)=>a.when-b.when);
-    const theoretical=k.billingType==='interest'?base:cents(contractBalance(k)*rate/100);
-    let index=0,paidBase=0,interest=0,days=0;
-    const start=ordinal(due)+1,end=ordinal(until);
-    // Juros simples, por dia civil e pela quantidade de dias do mês, sobre a
-    // fração do valor-base ainda não paga; nunca capitaliza juros vencidos.
-    for(let n=start;n<=end;n++){
-      while(index<paid.length&&paid[index].when<n)paidBase+=paid[index++].amount;
-      const pending=Math.max(0,base-paidBase);
-      if(!pending)break;
-      const civil=new Date(n*MS),monthDays=new Date(civil.getUTCFullYear(),civil.getUTCMonth()+1,0).getDate();
-      interest+=theoretical*(pending/base)/monthDays;
-      days++;
-    }
-    return {cents:Math.max(0,Math.round(interest)),days};
+    const until=dateISO(untilValue);
+    const total=(k.manualLateInterest||[]).filter(e=>e.reference===row.ref&&e.date<=until)
+      .reduce((sum,e)=>sum+Math.max(0,cents(e.amount)),0);
+    return {cents:total,days:0};
   }
   const previousCharge=chargeFor;
   chargeFor=function(cl,k,year,monthIndex,asOfValue){
@@ -73,7 +60,7 @@
     const text=[`*EXTRATO DE COBRANÇA — CREDIGESTOR*`,`Cliente: ${cl.name}`,`Contrato: ${k.loanCode||k.title||'Contrato'}`,`Atualizado em: ${when.toLocaleDateString('pt-BR')}`,`Capital ativo (informativo): ${brl(contractBalance(k))}`,``];
     if(!rows.length)text.push('Nenhuma cobrança vencida permanece em aberto nesta data.');
     rows.forEach(r=>text.push(`Referência ${r.ref} · vence em ${day(r.due||r.originalDue).toLocaleDateString('pt-BR')}`,
-      `Cobrança original: ${brl(r.baseAmount)}`,`Juros proporcionais por atraso: ${brl(r.lateInterest)} (${r.lateDays} dia(s) calculado(s))`,
+      `Cobrança original: ${brl(r.baseAmount)}`,`Juros de atraso lançados manualmente: ${brl(r.lateInterest)}`,
       `Valores já registrados: ${brl(r.paid)}`,`Saldo desta referência: ${brl(r.remaining)}`,``));
     text.push(`Juros de atraso nas referências abertas: ${brl(money(late))}`,
       `*TOTAL DAS COBRANÇAS EM ABERTO: ${brl(money(total))}*`,
@@ -85,7 +72,7 @@
     const receipt=window.paymentReceiptV25;
     window.paymentReceiptV25=function(cl,k,p){
       const body=receipt(cl,k,p);
-      return Number(p?.lateInterestAccrued)>0?body+'\n⏳ Juros proporcionais por atraso calculados na data: '+brl(p.lateInterestAccrued)+' ('+(p.lateInterestDays||0)+' dia(s)).':body;
+      return Number(p?.lateInterestAccrued)>0?body+'\nJuros de atraso incluídos na cobrança: '+brl(p.lateInterestAccrued)+'.':body;
     };
   }
   function clearOldButtons(root){
@@ -150,6 +137,41 @@
       };
     });
   }
+  function addManualLateInterest(cl,k,reference,amount,date,note=''){
+    if(k.active===false||isPaidContract(k))throw Error('Este contrato está encerrado.');
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(reference))throw Error('Selecione uma referência válida.');
+    if(!Number.isFinite(amount)||amount<=0||Math.abs(cents(amount)-amount*100)>1e-7)throw Error('Informe um valor positivo com até duas casas decimais.');
+    if(!day(date)||date>dateISO(new Date()))throw Error('Informe uma data válida, até hoje.');
+    const [y,m]=reference.split('-').map(Number),row=chargeFor(cl,k,y,m-1,date);
+    if(row.status==='not_due'||row.status==='capitalized'||dateISO(row.due)>=date)throw Error('Escolha uma cobrança vencida e ainda não incorporada ao capital.');
+    const before=JSON.parse(JSON.stringify(k));
+    try{
+      const entry={id:uid('late'),reference,amount:money(cents(amount)),date,note:String(note).trim(),createdAt:new Date().toISOString()};
+      k.manualLateInterest=[...(k.manualLateInterest||[]),entry];k.updatedAt=entry.createdAt;
+      saveState();return entry;
+    }catch(error){Object.keys(k).forEach(key=>delete k[key]);Object.assign(k,before);throw error;}
+  }
+  window.CrediGestorOverdueV29.addManual=addManualLateInterest;
+  function openManualLateInterest(){
+    const pair=getContext();if(!pair)return;const {cl,k}=pair;
+    openModal(`<h2>Inserir juros de atraso</h2><p class="muted">${esc(cl.name)} · ${esc(k.loanCode||k.title||'Contrato')}</p>
+      <div class="field"><label for="v29LateRef">Referência da cobrança</label><input id="v29LateRef" type="month" value="${esc(context.ref||dateISO(new Date()).slice(0,7))}" required></div>
+      <div class="field"><label for="v29LateAmount">Juros de atraso (R$)</label><input id="v29LateAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
+      <div class="field"><label for="v29LateDate">Data do lançamento</label><input id="v29LateDate" type="date" value="${dateISO(new Date())}" required></div>
+      <div class="field"><label for="v29LateReason">Motivo / observação</label><textarea id="v29LateReason"></textarea></div>
+      <p class="rule-note">O valor será acrescentado apenas à cobrança escolhida. O capital não muda. Os juros de atraso não são calculados automaticamente.</p>
+      <div class="actions"><button type="button" class="primary-btn" id="v29SaveLate">Salvar juros</button><button type="button" class="soft-btn" id="v29CancelLate">Voltar</button></div>`,()=>{
+        document.getElementById('v29CancelLate').onclick=()=>window.openPaymentsHubV21(cl.id,k.id,context.ref);
+        document.getElementById('v29SaveLate').onclick=e=>{
+          if(e.currentTarget.disabled)return;
+          try{
+            const ref=document.getElementById('v29LateRef').value;
+            addManualLateInterest(cl,k,ref,Number(document.getElementById('v29LateAmount').value),document.getElementById('v29LateDate').value,document.getElementById('v29LateReason').value);
+            e.currentTarget.disabled=true;closeModal();render();window.openPaymentsHubV21(cl.id,k.id,ref);
+          }catch(error){alert(error.message);}
+        };
+      });
+  }
   function decorateHub(){
     const grid=document.querySelector('#modalContent .v21-choice-grid'),pair=getContext();
     if(!grid||!pair||document.getElementById('v29Adjust'))return;
@@ -175,7 +197,7 @@
     inc.innerHTML='<span class="ico">↕</span><span><b>Aumentar / diminuir valor</b><small>Acrescentar capital ou iniciar amortização na aba Pagamentos.</small></span>';
     inc.onclick=openAdjustment;
     const st=document.createElement('button');st.type='button';st.className='v21-choice';st.id='v29Statement';
-    st.innerHTML='<span class="ico">▤</span><span><b>Enviar extrato ao cliente</b><small>Cobranças em aberto com juros proporcionais desde o 1º dia de atraso.</small></span>';
+    st.innerHTML='<span class="ico">▤</span><span><b>Enviar extrato ao cliente</b><small>Cobranças em aberto e encargos de atraso lançados manualmente.</small></span>';
     st.onclick=()=>{
       const {cl,k}=getContext();const msg=statement(cl,k,new Date());
       const phone=String(cl.phone||'').replace(/\D/g,'');
@@ -191,12 +213,15 @@
         });
       }
     };
-    grid.append(inc,st);
+    const manual=document.createElement('button');manual.type='button';manual.className='v21-choice';manual.id='v29ManualLate';
+    manual.innerHTML='<span class="ico">✎</span><span><b>Inserir juros de atraso</b><small>Informar manualmente o valor e a referência da cobrança.</small></span>';
+    manual.onclick=openManualLateInterest;
+    grid.append(inc,manual,st);
     const [y,m]=String(context?.ref||'').split('-').map(Number);
     if(y&&m){const r=chargeFor(pair.cl,pair.k,y,m-1);
       if(r.lateInterest>0){
         const note=document.createElement('p');note.className='rule-note';note.id='v29LateNote';
-        note.textContent=`Atraso: ${r.lateDays} dia(s) com juros proporcionais de ${brl(r.lateInterest)}; total pendente nesta referência: ${brl(r.remaining)}.`;
+        note.textContent=`Juros de atraso manuais: ${brl(r.lateInterest)}; total pendente nesta referência: ${brl(r.remaining)}.`;
         grid.before(note);
       }
     }
@@ -215,7 +240,7 @@
       const input=document.getElementById('v21Amount');
       if(input&&lastQuoted!==null&&cents(input.value)===lastQuoted)input.value=Number(r.remaining).toFixed(2);
       lastQuoted=cents(r.remaining);
-      field.textContent=r.lateInterest>0?`Juros proporcionais de atraso: ${brl(r.lateInterest)} (${r.lateDays} dia(s)). Total para a referência na data escolhida: ${brl(r.remaining)}.`:
+      field.textContent=r.lateInterest>0?`Juros de atraso manuais: ${brl(r.lateInterest)}. Total para a referência na data escolhida: ${brl(r.remaining)}.`:
         'Sem juros adicionais de atraso na data informada.';
     };
     container.querySelector('#v21Date')?.addEventListener('change',refresh);
@@ -244,7 +269,7 @@
         if(!cl||!k||!y||!m||!card||card.querySelector('.v29-charge-late'))return;
         const r=chargeFor(cl,k,y,m-1);if(!r.lateInterest)return;
         const note=document.createElement('small');note.className='v29-charge-late muted';note.style.display='block';
-        note.textContent=`Inclui ${brl(r.lateInterest)} de juros proporcionais por atraso (${r.lateDays} dia(s)).`;
+        note.textContent=`Inclui ${brl(r.lateInterest)} de juros de atraso lançados manualmente.`;
         card.append(note);
       });
       return result;
