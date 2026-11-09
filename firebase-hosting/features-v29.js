@@ -81,6 +81,13 @@
     return text.join('\n');
   }
   window.CrediGestorOverdueV29.statement=statement;
+  if(typeof window.paymentReceiptV25==='function'){
+    const receipt=window.paymentReceiptV25;
+    window.paymentReceiptV25=function(cl,k,p){
+      const body=receipt(cl,k,p);
+      return Number(p?.lateInterestAccrued)>0?body+'\n⏳ Juros proporcionais por atraso calculados na data: '+brl(p.lateInterestAccrued)+' ('+(p.lateInterestDays||0)+' dia(s)).':body;
+    };
+  }
   function clearOldButtons(root){
     if(!root)return;
     root.querySelectorAll('.move-loan2,.move-contract,.edit-contract-date,#changeBalanceFromHistory2').forEach(el=>el.remove());
@@ -147,6 +154,23 @@
     const grid=document.querySelector('#modalContent .v21-choice-grid'),pair=getContext();
     if(!grid||!pair||document.getElementById('v29Adjust'))return;
     const selected=document.getElementById('v21ChargeRef');if(selected&&context)context.ref=selected.value;
+    // A opção de quitação usa o extrato completo (juros vencidos, juros diários
+    // e proporcionais do período). A quitação antiga considerava só o mês atual.
+    const payoff=document.getElementById('v21Payoff');
+    if(payoff&&typeof window.openEarlyCloseV28==='function'){
+      payoff.onclick=()=>window.openEarlyCloseV28(pair.cl.id,pair.k.id);
+      const desc=payoff.querySelector('small');
+      if(desc)desc.textContent='Verificar extrato integral, juros de atraso e saldo antes de quitar.';
+      try{
+        const closeQuote=window.earlyCloseStatement(pair.cl.id,pair.k.id,dateISO(new Date()));
+        const values=document.querySelectorAll('#modalContent .v21-summary strong');
+        if(values.length>=3){
+          values[0].textContent=brl(closeQuote.principal/100);
+          values[1].textContent=brl(closeQuote.interest/100);
+          values[2].textContent=brl(closeQuote.total/100);
+        }
+      }catch(err){console.warn('Não foi possível atualizar a prévia de quitação.',err);}
+    }
     const inc=document.createElement('button');inc.type='button';inc.className='v21-choice';inc.id='v29Adjust';
     inc.innerHTML='<span class="ico">↕</span><span><b>Aumentar / diminuir valor</b><small>Acrescentar capital ou iniciar amortização na aba Pagamentos.</small></span>';
     inc.onclick=openAdjustment;
