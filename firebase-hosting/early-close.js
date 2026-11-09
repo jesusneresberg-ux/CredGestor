@@ -51,7 +51,7 @@
     const first=firstPaymentDate(k);if(!first)return [];
     const refs=new Set(Object.keys(k.dueDateOverrides||{})),last=closing.getFullYear()*12+closing.getMonth();
     for(let i=first.getFullYear()*12+first.getMonth();i<=last;i++)refs.add(`${Math.floor(i/12)}-${String(i%12+1).padStart(2,'0')}`);
-    return [...refs].filter(ref=>ref!==currentRef).map(ref=>{const [y,m]=ref.split('-').map(Number);return chargeFor(cl,k,y,m-1)})
+    return [...refs].filter(ref=>ref!==currentRef).map(ref=>{const [y,m]=ref.split('-').map(Number);return chargeFor(cl,k,y,m-1,closing)})
       .filter(x=>x.status!=='not_due'&&x.remaining>0&&ymd(x.originalDue||x.due)<=ymd(closing))
       .sort((a,b)=>(a.originalDue||a.due)-(b.originalDue||b.due)||a.ref.localeCompare(b.ref));
   }
