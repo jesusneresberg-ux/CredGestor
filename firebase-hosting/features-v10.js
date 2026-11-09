@@ -156,7 +156,7 @@
     const map=Object.fromEntries(months.map(m=>[m.key,0]));
     (state.clients||[]).forEach(cl=>(cl.contracts||[]).forEach(k=>{
       const key=dateKeyV10(k.startDate)||dateKeyV10(k.createdAt);if(Object.hasOwn(map,key))map[key]+=Number(k.initialPrincipal)||0;
-      (k.movements||[]).filter(m=>m.type==='increase').forEach(m=>{const mk=dateKeyV10(m.date)||dateKeyV10(m.createdAt);if(Object.hasOwn(map,mk))map[mk]+=Number(m.amount)||0});
+      (k.movements||[]).filter(m=>m.type==='increase'&&!m.nonCash).forEach(m=>{const mk=dateKeyV10(m.date)||dateKeyV10(m.createdAt);if(Object.hasOwn(map,mk))map[mk]+=Number(m.amount)||0});
     }));
     return months.map(m=>({...m,value:map[m.key]||0}));
   }

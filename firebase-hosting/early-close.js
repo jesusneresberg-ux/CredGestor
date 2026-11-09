@@ -60,11 +60,14 @@
     const closing=parseDay(closingISO);if(!closing)throw Error('Informe uma data de encerramento válida.');
     const start=contractStartDate(k);if(start&&closing<start)throw Error('A data de encerramento não pode ser anterior ao início do contrato.');
     const period=currentPeriod(k,closing),periodDays=Math.max(1,days(period.from,period.to)),elapsed=Math.min(periodDays,Math.max(0,days(period.from,closing)));
+    const capitalizedOn=(k.movements||[]).filter(v=>v.kind==='interest_capitalization'&&v.date<=closingISO).map(v=>v.date).sort().at(-1);
+    const accrualFrom=capitalizedOn&&capitalizedOn>ymd(period.from)?parseDay(capitalizedOn):period.from;
+    const effectiveElapsed=Math.min(periodDays,Math.max(0,days(accrualFrom,closing)));
     const monthly=cents(monthlyDue(k)),paidCurrent=cents(paymentTotalForMonth(k,period.ref));
-    const accrued=Math.round(monthly*elapsed/periodDays),proportional=Math.max(0,accrued-paidCurrent);
+    const accrued=Math.round(monthly*effectiveElapsed/periodDays),proportional=Math.max(0,accrued-paidCurrent);
     const overdue=overdueCharges(cl,k,closing,period.ref).map(x=>({ref:x.ref,due:x.due,remaining:cents(x.remaining),amount:cents(x.amount),paid:cents(x.paid)}));
     const overdueTotal=overdue.reduce((t,x)=>t+x.remaining,0),principal=cents(contractBalance(k));
-    return {closing,closingISO,period,periodDays,elapsed,monthly,paidCurrent,accrued,proportional,overdue,overdueTotal,principal,interest:overdueTotal+proportional,total:principal+overdueTotal+proportional,rate:Number(k.interestRate)||0,billingType:k.billingType};
+    return {closing,closingISO,period,periodDays,elapsed:effectiveElapsed,monthly,paidCurrent,accrued,proportional,overdue,overdueTotal,principal,interest:overdueTotal+proportional,total:principal+overdueTotal+proportional,rate:Number(k.interestRate)||0,billingType:k.billingType};
   }
   window.earlyCloseStatement=(clientId,contractId,date)=>{const {cl,k}=find(clientId,contractId);return statement(cl,k,date||localToday())};
 

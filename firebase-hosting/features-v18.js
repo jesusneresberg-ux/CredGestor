@@ -97,7 +97,7 @@
       <div class="actions"><button type="button" class="primary-btn" id="saveMovementBtn">Registrar alteração</button></div>
       <div class="rule-note">Na amortização, o saldo do contrato é reduzido imediatamente. As próximas cobranças de juros passam a usar o novo saldo.</div>
       <div class="section-title"><h2>Histórico</h2></div>
-      ${(k.movements||[]).length?k.movements.slice().reverse().map(m=>`<div class="contract-card"><div class="row space"><div class="title">${m.type==='increase'?'Acréscimo':'Amortização'}</div><strong>${m.type==='increase'?'+':'-'} ${brl(m.amount)}</strong></div><div class="muted">${new Date(m.date+'T12:00').toLocaleDateString('pt-BR')} • ${esc(m.note||'')}</div></div>`).join(''):`<div class="empty">Nenhuma alteração de principal.</div>`}
+      ${(k.movements||[]).length?k.movements.slice().reverse().map(m=>`<div class="contract-card"><div class="row space"><div class="title">${m.kind==='interest_capitalization'?'Juros incorporados ao capital':m.type==='increase'?'Acréscimo':'Amortização'}</div><strong>${m.type==='increase'?'+':'-'} ${brl(m.amount)}</strong></div><div class="muted">${new Date(m.date+'T12:00').toLocaleDateString('pt-BR')} • ${esc(m.note||'')}</div></div>`).join(''):`<div class="empty">Nenhuma alteração de principal.</div>`}
     `,()=>{
       const typeEl=document.getElementById('mType'),amountEl=document.getElementById('mAmount'),preview=document.querySelector('#mPreviewV18 strong'),save=document.getElementById('saveMovementBtn');
       const updatePreview=()=>{

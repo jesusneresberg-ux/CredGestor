@@ -25,6 +25,7 @@ jobs:
       - run: node tests/early-close.cjs
       - run: node tests/payment-methods.cjs
       - run: node tests/juros-atraso-diarios.cjs
+      - run: node tests/capitalization.cjs
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

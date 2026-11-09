@@ -239,7 +239,7 @@
   function timelineV21(cl){
     const rows=[];(cl.contracts||[]).forEach(k=>{
       (k.payments||[]).forEach(p=>rows.push({date:p.paidAt||p.createdAt?.slice(0,10)||'',kind:p.payoff?'Quitação total':p.type==='partial'?'Adiantamento':'Pagamento',amount:Number(p.amount)||0,text:`${loanCodeV21(k)}${p.reference?` • ref. ${p.reference}`:''}${p.method?` • ${p.method}`:''}${p.paymentDetails?` • ${p.paymentDetails}`:''}${p.payoff?` • capital ${brl(p.principalAmount||0)} + juros ${brl(p.interestAmount||0)}`:''}`}));
-      (k.movements||[]).forEach(m=>rows.push({date:m.date||m.createdAt?.slice(0,10)||'',kind:m.type==='increase'?'Acréscimo':'Amortização',amount:Number(m.amount)||0,text:`${loanCodeV21(k)}${m.method?` • ${m.method}`:''}${m.paymentDetails?` • ${m.paymentDetails}`:''}${Number.isFinite(Number(m.balanceAfter))?` • saldo após ${brl(m.balanceAfter)}`:''}`}));
+      (k.movements||[]).forEach(m=>rows.push({date:m.date||m.createdAt?.slice(0,10)||'',kind:m.kind==='interest_capitalization'?'Juros incorporados ao capital':m.type==='increase'?'Acréscimo':'Amortização',amount:Number(m.amount)||0,text:`${loanCodeV21(k)}${m.method?` • ${m.method}`:''}${m.paymentDetails?` • ${m.paymentDetails}`:''}${Number.isFinite(Number(m.balanceAfter))?` • saldo após ${brl(m.balanceAfter)}`:''}`}));
       if(k.closedAt)rows.push({date:k.closedAt,kind:'Contrato encerrado',amount:0,text:`${loanCodeV21(k)} • ${k.closedReason||'Encerrado'}`});
     });
     return rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.kind).localeCompare(String(b.kind)));

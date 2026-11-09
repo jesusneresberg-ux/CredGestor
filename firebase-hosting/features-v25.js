@@ -20,6 +20,7 @@
   }
   function movementTotalsV25(k){
     return (k?.movements||[]).reduce((a,m)=>{
+      if(m?.nonCash)return a;
       const value=Math.max(0,numV25(m?.amount));
       if(m?.type==='increase')a.increases+=value;
       else a.reductions+=value;

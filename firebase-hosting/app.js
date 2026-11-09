@@ -506,7 +506,7 @@ function openMovementModal(clientId, contractId){
     <div class="field"><label>Observação</label><textarea id="mNote" placeholder="Ex.: cliente pediu mais R$ 500"></textarea></div>
     <div class="actions"><button type="button" class="primary-btn" id="saveMovementBtn">Registrar alteração</button></div>
     <div class="section-title"><h2>Histórico</h2></div>
-    ${(k.movements||[]).length?k.movements.slice().reverse().map(m=>`<div class="contract-card"><div class="row space"><div class="title">${m.type==='increase'?'Acréscimo':'Amortização'}</div><strong>${m.type==='increase'?'+':'-'} ${brl(m.amount)}</strong></div><div class="muted">${new Date(m.date+'T12:00').toLocaleDateString('pt-BR')} • ${esc(m.note||'')}</div></div>`).join(''):`<div class="empty">Nenhuma alteração de principal.</div>`}
+    ${(k.movements||[]).length?k.movements.slice().reverse().map(m=>`<div class="contract-card"><div class="row space"><div class="title">${m.kind==='interest_capitalization'?'Juros incorporados ao capital':m.type==='increase'?'Acréscimo':'Amortização'}</div><strong>${m.type==='increase'?'+':'-'} ${brl(m.amount)}</strong></div><div class="muted">${new Date(m.date+'T12:00').toLocaleDateString('pt-BR')} • ${esc(m.note||'')}</div></div>`).join(''):`<div class="empty">Nenhuma alteração de principal.</div>`}
   `,()=>{
     document.getElementById('saveMovementBtn').onclick=()=>{
       const amount=Number(document.getElementById('mAmount').value)||0;if(amount<=0){alert('Informe um valor maior que zero.');return}
