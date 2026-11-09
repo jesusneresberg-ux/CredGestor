@@ -32,7 +32,15 @@ function setup(){
  assert.ok(storage.size===1);assert.equal(JSON.parse([...storage.values()][0]).clients[0].contracts[0].movements.length,0);
  // JSON roundtrip keeps idempotency and snapshots.
  ctx.state=JSON.parse(JSON.stringify(ctx.state));assert.equal(ctx.window.CrediGestorCapitalization.apply(),null);
+ const csv=fs.readFileSync(root+'backup-csv.js','utf8');vm.runInContext(csv.slice(0,csv.indexOf('function parseLegacyLoan3')),ctx);
+ const rows=vm.runInContext('[CSV_HEADERS3,...csvRows3().map(row=>CSV_HEADERS3.map(key=>row[key]??""))]',ctx);
+ const balance=ctx.contractBalance(ctx.state.clients[0].contracts[0]);ctx.state.clients=[];ctx.importStructuredCSV3(rows);
+ const restored=ctx.state.clients[0].contracts.find(k=>k.id==='normal');
+ assert.equal(ctx.contractBalance(restored),balance);assert.equal(restored.movements[0].nonCash,true);
+ assert.equal(ctx.chargeFor(ctx.state.clients[0],restored,2026,10,'2026-11-10').remaining,0,'CSV preserves incorporated charges');
+ assert.equal(ctx.window.CrediGestorCapitalization.plan().entries.some(e=>['normal','partial'].includes(e.k.id)),false,'CSV preserves per-contract idempotency');
 }
+
 {
  const {ctx,loan,fail}=setup();loan('failure');const before=JSON.stringify(ctx.state);fail();
  assert.throws(()=>ctx.window.CrediGestorCapitalization.apply(),/save failed/);assert.equal(JSON.stringify(ctx.state),before);

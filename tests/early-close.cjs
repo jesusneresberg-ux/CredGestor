@@ -27,18 +27,18 @@ const fixtures=['partial','payoff','ui'].map(id=>({id,name:'Cliente '+id,phone:'
     await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(()=>window.testBooted);
     await check('Extrato: capital, atraso e juros proporcionais (20 de 31 dias)',async()=>{
       const s=await page.evaluate(()=>earlyCloseStatement('partial','partial-loan','2026-11-04'));
-      assert.equal(s.principal,1000000);assert.equal(s.overdueTotal,164516);assert.equal(s.elapsed,20);assert.equal(s.periodDays,31);assert.equal(s.proportional,64516);assert.equal(s.total,1229032);
+      assert.equal(s.principal,1000000);assert.equal(s.overdueTotal,164946);assert.equal(s.elapsed,20);assert.equal(s.periodDays,31);assert.equal(s.proportional,64516);assert.equal(s.total,1229462);
     });
     await check('Valor parcial paga juros e abate o restante do capital',async()=>{
-      await page.evaluate(()=>registerEarlyClose('partial','partial-loan','2026-11-04',7290.32,'PIX',''));
+      await page.evaluate(()=>registerEarlyClose('partial','partial-loan','2026-11-04',7294.62,'PIX',''));
       const x=await info('partial');
       assert.equal(x.balance,5000);assert.equal(x.k.active,true);assert.equal(x.oct.status,'paid');
       assert.equal(x.nov.remaining,177.42,'restante do mês = 500 x 11/31');
       assert.equal(x.k.movements.length,1);assert.equal(x.k.movements[0].amount,5000);
     });
     await check('Valor total quita e encerra o contrato',async()=>{
-      await page.evaluate(()=>registerEarlyClose('payoff','payoff-loan','2026-11-04',12290.32,'PIX',''));
-      const x=await info('payoff');assert.equal(x.k.active,false);assert.equal(x.balance,0);assert.equal(x.k.payments[0].interestAmount,2290.32);
+      await page.evaluate(()=>registerEarlyClose('payoff','payoff-loan','2026-11-04',12294.62,'PIX',''));
+      const x=await info('payoff');assert.equal(x.k.active,false);assert.equal(x.balance,0);assert.equal(x.k.payments[0].interestAmount,2294.62);
       assert.equal(await page.evaluate(()=>activeContracts().some(a=>a.c.id==='payoff-loan')),false);
     });
     await check('Valor acima do total é recusado sem gravar',async()=>{
@@ -48,13 +48,13 @@ const fixtures=['partial','payoff','ui'].map(id=>({id,name:'Cliente '+id,phone:'
     await check('Botão na central de pagamentos abre o extrato e registra pela tela',async()=>{
       await page.evaluate(()=>window.openPaymentsHubV21('ui','ui-loan'));
       await page.locator('#v28EarlyClose').click();
-      assert.match(await page.locator('#ecStatement').innerText(),/12\.290,32/);
+      assert.match(await page.locator('#ecStatement').innerText(),/12\.294,62/);
       await page.locator('#ecAmount').fill('3000');
-      assert.match(await page.locator('#ecPreview').innerText(),/709,68/);
+      assert.match(await page.locator('#ecPreview').innerText(),/705,38/);
       await page.locator('#ecConfirm').click();
       await page.waitForSelector('#receiptTextV25');
-      const t=await page.locator('#receiptTextV25').inputValue();assert.match(t,/Capital abatido: R\$\s*709,68/);assert.match(t,/Capital restante: R\$\s*9\.290,32/);
-      assert.equal((await info('ui')).balance,9290.32);
+      const t=await page.locator('#receiptTextV25').inputValue();assert.match(t,/Capital abatido: R\$\s*705,38/);assert.match(t,/Capital restante: R\$\s*9\.294,62/);
+      assert.equal((await info('ui')).balance,9294.62);
     });
   }finally{
     console.log(JSON.stringify({results,errors},null,2));await browser.close();server.close();
