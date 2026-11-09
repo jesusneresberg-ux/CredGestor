@@ -109,7 +109,7 @@
     if(cents>remainingCents||remainingCents===0){alert(`O saldo restante deste mês é ${brl(charge.remaining)}. Informe um valor até esse saldo.`);return null}
     const remainingForMonth=(remainingCents-cents)/100;
     const previous=JSON.parse(JSON.stringify(k));
-    const payment={...paymentMeta,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
+    const payment={...paymentMeta,lateInterestAccrued:charge.lateInterest||0,lateInterestDays:charge.lateDays||0,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
     payment.dueDateAtPayment=ymd(charge.due);
     if(attachment)payment.receivedReceipt=attachment;
     k.payments=k.payments||[];k.payments.push(payment);k.updatedAt=new Date().toISOString();saveFinancialEventV21(cl,k,'payments',payment.id,previous);return payment;
