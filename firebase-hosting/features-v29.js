@@ -54,12 +54,29 @@
     }
     return rows;
   }
+  // Só datas financeiras alteram a referência; updatedAt também muda em edições cadastrais.
+  function capitalStatementDates(k,asOf){
+    const until=day(asOf),dates=[k.lastBalanceUpdate,...(k.movements||[])
+      .filter(m=>['increase','amortization'].includes(m.type)&&Number(m.amount)>0).map(m=>m.date)]
+      .filter(Boolean).map(day).filter(d=>d&&ordinal(d)<=ordinal(until));
+    if(!dates.length||isPaidContract(k)||k.billingType==='amortization')return null;
+    const updated=dates.sort((a,b)=>a-b).at(-1);
+    const base=Math.min(30,Math.max(1,Number(k.baseDueDay)||1));
+    const dueIn=m=>new Date(updated.getFullYear(),m,Math.min(base,new Date(updated.getFullYear(),m+1,0).getDate()),12);
+    let due=dueIn(updated.getMonth());
+    if(ordinal(due)<=ordinal(updated))due=dueIn(updated.getMonth()+1);
+    const first=day(firstPaymentDate(k));
+    if(first&&ordinal(first)>ordinal(due))due=first;
+    return {updated,due};
+  }
   function statement(cl,k,asOf){
     const when=day(asOf),rows=monthRows(cl,k,when),total=rows.reduce((n,r)=>n+cents(r.remaining),0);
     const late=rows.reduce((n,r)=>n+cents(r.lateInterest),0);
     const text=[`*EXTRATO DE COBRANÇA — CREDIGESTOR*`,`Cliente: ${cl.name}`,`Contrato: ${k.loanCode||k.title||'Contrato'}`,`Atualizado em: ${when.toLocaleDateString('pt-BR')}`,`Capital ativo (informativo): ${brl(contractBalance(k))}`,``];
+    const capitalDates=capitalStatementDates(k,when);
+    if(capitalDates)text.push(`Capital atualizado em: ${capitalDates.updated.toLocaleDateString('pt-BR')}`,`Vencimento após atualização do capital: ${capitalDates.due.toLocaleDateString('pt-BR')}`,``);
     if(!rows.length)text.push('Nenhuma cobrança vencida permanece em aberto nesta data.');
-    rows.forEach(r=>text.push(`Referência ${r.ref} · vence em ${day(r.due||r.originalDue).toLocaleDateString('pt-BR')}`,
+    rows.forEach(r=>text.push(`Referência ${r.ref} · vencimento original: ${day(r.originalDue||r.due).toLocaleDateString('pt-BR')}`,
       `Cobrança original: ${brl(r.baseAmount)}`,`Juros de atraso lançados manualmente: ${brl(r.lateInterest)}`,
       `Valores já registrados: ${brl(r.paid)}`,`Saldo desta referência: ${brl(r.remaining)}`,``));
     text.push(`Juros de atraso nas referências abertas: ${brl(money(late))}`,
@@ -68,6 +85,7 @@
     return text.join('\n');
   }
   window.CrediGestorOverdueV29.statement=statement;
+  window.CrediGestorOverdueV29.capitalStatementDates=capitalStatementDates;
   if(typeof window.paymentReceiptV25==='function'){
     const receipt=window.paymentReceiptV25;
     window.paymentReceiptV25=function(cl,k,p){
