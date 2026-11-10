@@ -192,7 +192,7 @@
       document.getElementById('v21Parcel').insertAdjacentHTML('afterend','<button type="button" class="v21-choice" id="v21Partial"><span class="ico">🧾</span><span><b>Pagamento parcial</b><small>Registrar adiantamento e enviar o saldo restante para quitar o mês.</small></span></button>');
       document.getElementById('v21Partial').onclick=()=>openPartialV21(clientId,contractId,useRef);
       document.getElementById('v21Amortize').onclick=()=>openAmortizeV21(clientId,contractId,useRef);
-      if(k.billingType==='amortization'){select.hidden=true;document.getElementById('v21Parcel').hidden=true;document.getElementById('v21Partial').hidden=true;}
+      if(k.billingType==='amortization'){select.hidden=true;document.getElementById('v21Parcel').style.display='none';document.getElementById('v21Partial').style.display='none';}
       document.getElementById('v21Payoff').onclick=()=>openPayoffV21(clientId,contractId,useRef);
     });
   }
