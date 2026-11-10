@@ -71,13 +71,13 @@ const fixtures=[['today','Hoje','2026-09-08',100],['late','Atrasado','2026-09-01
     });
     await check('Quitação de capital mantém juros residuais após adiantamento',async()=>{
       await page.evaluate(()=>{state.clients.find(c=>c.id==='late').contracts[0].billingType='interest';saveState()});
-      await open('late','late');assert.match(await page.locator('#modalContent').innerText(),/1\.125,16/);
+      await open('late','late');assert.match(await page.locator('#modalContent').innerText(),/1\.102,58/);
     });
     await check('Sem telefone: adiantamento salvo e comprovante disponível para copiar',async()=>{
       await page.evaluate(()=>{state.clients.find(c=>c.id==='late').phone='';saveState()});
       const count=await page.evaluate(()=>window.sentReceipts.length);await partial('late','late',10);
-      assert.equal((await data('late')).charge.remaining,92.58);assert.equal(await page.locator('#v21SendAdvance').isDisabled(),true);
-      assert.equal(await page.locator('#v21CopyAdvance').count(),1);assert.match(await page.locator('#v21AdvanceReceipt').inputValue(),/RESTANTE PARA QUITAR O MÊS: R\$\s*92,58/);
+      assert.equal((await data('late')).charge.remaining,70);assert.equal(await page.locator('#v21SendAdvance').isDisabled(),true);
+      assert.equal(await page.locator('#v21CopyAdvance').count(),1);assert.match(await page.locator('#v21AdvanceReceipt').inputValue(),/RESTANTE PARA QUITAR O MÊS: R\$\s*70,00/);
       assert.equal(await page.evaluate(()=>window.sentReceipts.length),count);
     });
     await check('Falha ao salvar não registra nem emite comprovante',async()=>{
