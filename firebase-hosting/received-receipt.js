@@ -9,26 +9,27 @@
   };  function attach(clientId,contractId,ref){
     const client=state.clients.find(x=>x.id===clientId),contract=client?.contracts.find(x=>x.id===contractId);if(!contract||isPaidContract(contract))return;
     const reference=ref||window.pendingCollectionCharges(client,contract)[0]?.ref||monthRef(),[y,m]=reference.split('-').map(Number),charge=chargeFor(client,contract,y,m-1);if(charge.remaining<=0||charge.status==='not_due'){alert('Esta parcela não possui valor em aberto.');return;}
-    const text=`📩 *Mensagem de cobrança*\n\n👤 Olá, ${client.name}!\n\n📄 Seu débito referente ao contrato ${contract.loanCode||contract.title||contract.id} está em aberto.\n\n💰 Valor total para quitação (capital + juros atuais): ${brl(window.collectionPayoffQuote(contract).total)}\n\n\n💵 Valor da parcela em aberto: ${brl(charge.remaining)}\n🗓️ Referência: ${reference}\n📅 Vencimento: ${charge.due.toLocaleDateString('pt-BR')}\n\n🤝 Por favor, entre em contato para regularizar o pagamento.\n🧾 Caso já tenha pago, envie o comprovante para conferência.`;
+    const collectionText=`📩 *Mensagem de cobrança*\n\n👤 Olá, ${client.name}!\n\n📄 Seu débito referente ao contrato ${contract.loanCode||contract.title||contract.id} está em aberto.\n\n💰 Valor total para quitação (capital + juros atuais): ${brl(window.collectionPayoffQuote(contract).total)}\n\n\n💵 Valor da parcela em aberto: ${brl(charge.remaining)}\n🗓️ Referência: ${reference}\n📅 Vencimento: ${charge.due.toLocaleDateString('pt-BR')}\n\n🤝 Por favor, entre em contato para regularizar o pagamento.\n🧾 Caso já tenha pago, envie o comprovante para conferência.`;
     let phone=String(client.phone||'').replace(/\D/g,'');if(phone.length===10||phone.length===11)phone='55'+phone;const valid=/^55\d{10,11}$/.test(phone);
-    openModal(`<h2>Mensagem de cobrança</h2><div class="field"><label>Confira a mensagem antes de enviar</label><textarea id="collectionText" readonly rows="16">${esc(text)}</textarea></div><div class="actions">${valid?`<a class="primary-btn" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_self">Abrir WhatsApp</a>`:''}<button type="button" class="soft-btn" id="copyCollection">Copiar mensagem</button></div><p class="muted" id="collectionStatus" role="status">${valid?'Confirme o envio no WhatsApp.':'Cadastre um telefone com DDD para abrir o WhatsApp. Você pode copiar a mensagem.'}</p>`,()=>{
-      const key=String(state.settings.pixKey||'').trim();
-      const bankText=`💳 *Dados para pagamento via Pix*\n👤 Favorecido: ${String(state.settings.pixName||'').trim()||'Não informado'}\n🏦 Banco: ${String(state.settings.pixBank||'').trim()||'Não informado'}\n🔖 Tipo de chave: ${String(state.settings.pixType||'').trim()||'Não informado'}\n🔑 Chave Pix: ${key}`;
-      const pixSection=document.createElement('section');pixSection.style.marginTop='24px';
-      pixSection.innerHTML=key?`<h3>2ª mensagem · Dados bancários</h3><div class="field"><textarea id="collectionPixText" readonly rows="6">${esc(bankText)}</textarea></div><div class="actions">${valid?`<a class="primary-btn" id="sendCollectionPix" href="https://wa.me/${phone}?text=${encodeURIComponent(bankText)}" target="_self">Enviar dados bancários no WhatsApp</a>`:''}<button type="button" class="soft-btn" id="copyCollectionPix">Copiar segunda mensagem</button></div><p class="muted" id="collectionPixStatus" role="status"></p><h3>3ª mensagem · Somente a chave Pix</h3><p class="muted">Envie a chave separadamente. O cliente pode pressionar o balão no WhatsApp e copiar.</p><div class="field"><textarea id="collectionPixKey" readonly rows="2">${esc(key)}</textarea></div><div class="actions">${valid?`<a class="primary-btn" id="sendCollectionPixKey" href="https://wa.me/${phone}?text=${encodeURIComponent(key)}" target="_self">Enviar somente a chave no WhatsApp</a>`:''}<button type="button" class="soft-btn" id="copyCollectionPixKey">Copiar chave</button></div><p class="muted" id="collectionPixKeyStatus" role="status"></p>`:'<h3>2ª mensagem · Dados bancários</h3><h3>3ª mensagem · Somente a chave Pix</h3><p class="muted">Nenhuma chave Pix cadastrada. Cadastre em Configurações → PIX e WhatsApp.</p>';
-      document.getElementById('modalContent').append(pixSection);
-      async function copyPix(fieldId,statusId,message){
-        const field=document.getElementById(fieldId),status=document.getElementById(statusId);
-        try{await navigator.clipboard.writeText(field.value);status.textContent=message;}
-        catch(_){field.focus();field.select();const ok=document.execCommand('copy');status.textContent=ok?message:'Texto selecionado. Copie e envie separadamente.';}
+    const key=String(state.settings.pixKey||'').trim();
+    const bankText=key?`\n\n💳 *Dados para pagamento via Pix*\n👤 Favorecido: ${String(state.settings.pixName||'').trim()||'Não informado'}\n🏦 Banco: ${String(state.settings.pixBank||'').trim()||'Não informado'}\n🔖 Tipo de chave: ${String(state.settings.pixType||'').trim()||'Não informado'}\n\n🔑 *Chave Pix*\n`:'';
+    const text=collectionText+bankText+key;
+    openModal(`<h2>Mensagem de cobrança</h2><p class="muted">Cobrança e dados para pagamento em uma única mensagem.</p><div class="field"><label>Confira antes de enviar</label><div id="collectionText" role="textbox" aria-readonly="true" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;padding:12px 14px;border:1px solid var(--line,rgba(16,32,51,.12));border-radius:14px;background:var(--surface-solid,#fff);color:var(--text,#102033)">${esc(collectionText+bankText)}${key?`<u id="collectionPixKey" style="text-underline-offset:3px;user-select:all">${esc(key)}</u>`:''}</div></div><div class="actions">${valid?`<a class="primary-btn" id="sendCollection" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_self">Abrir WhatsApp</a>`:''}<button type="button" class="soft-btn" id="copyCollection">Copiar mensagem completa</button>${key?'<button type="button" class="soft-btn" id="copyCollectionPixKey">Copiar chave Pix</button>':''}</div><p class="muted" id="collectionStatus" role="status">${valid?'Confirme o envio no WhatsApp.':'Cadastre um telefone com DDD para abrir o WhatsApp. Você pode copiar a mensagem.'}</p>${key?'<p class="muted">No WhatsApp, o cliente pode pressionar o balão e copiar a mensagem. O botão Copiar chave e o sublinhado aparecem apenas nesta prévia.</p>':'<p class="muted">Nenhuma chave Pix cadastrada. Cadastre em Configurações → PIX e WhatsApp.</p>'}`,()=>{
+      async function copy(value,message,fieldId){
+        const status=document.getElementById('collectionStatus');
+        try{await navigator.clipboard.writeText(value);status.textContent=message;}
+        catch(_){
+          const tmp=document.createElement('textarea');tmp.value=value;tmp.setAttribute('readonly','');tmp.style.position='fixed';tmp.style.opacity='0';document.body.append(tmp);tmp.focus();tmp.select();
+          const ok=document.execCommand('copy');tmp.remove();
+          if(ok){status.textContent=message;return;}
+          const range=document.createRange();range.selectNodeContents(document.getElementById(fieldId));const selection=getSelection();selection.removeAllRanges();selection.addRange(range);status.textContent='Texto selecionado. Copie manualmente.';
+        }
       }
-      if(key){
-        document.getElementById('copyCollectionPix').onclick=()=>copyPix('collectionPixText','collectionPixStatus','Dados bancários copiados.');
-        document.getElementById('copyCollectionPixKey').onclick=()=>copyPix('collectionPixKey','collectionPixKeyStatus','Chave Pix copiada.');
-      }
-      document.getElementById('copyCollection').onclick=async()=>{const field=document.getElementById('collectionText'),status=document.getElementById('collectionStatus');try{await navigator.clipboard.writeText(text);status.textContent='Mensagem copiada.';}catch(_){field.focus();field.select();status.textContent='Texto selecionado. Copie e cole na conversa do cliente.';}};
+      document.getElementById('copyCollection').onclick=()=>copy(text,'Mensagem completa copiada.','collectionText');
+      if(key)document.getElementById('copyCollectionPixKey').onclick=()=>copy(key,'Chave Pix copiada.','collectionPixKey');
     });
   }
+
   function decorate(root,clientId){
     root?.querySelectorAll('.loan-card,.contract-card,.list-item').forEach(card=>{
       if(card.querySelector('.received-attach'))return;
