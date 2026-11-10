@@ -101,6 +101,8 @@ const fixtures=['parcel','partial','payoff','amort','early','other','switch','on
       assert.equal(await page.locator('#kRate').isDisabled(),true);
       assert.equal(await page.locator('#kFixed').isDisabled(),true);
       await page.locator('#saveContractBtn').click();
+      await page.clock.runFor(50);
+      await page.waitForSelector('#receiptTextV25');
       const created=await page.evaluate(()=>{
         const cl=state.clients.find(c=>c.id==='new-only'),k=cl.contracts.find(k=>k.billingType==='amortization');
         return {k,balance:contractBalance(k),monthly:monthlyDue(k),charge:chargeFor(cl,k,2026,11),receipt:contractReceiptBlockV25(cl,k)};
