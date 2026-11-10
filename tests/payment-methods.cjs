@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{
   fs.readFile(file,(e,data)=>{if(e)res.writeHead(404).end();else{res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(data)}});
 });
 const loan=id=>({id:id+'-loan',title:id+'-loan',active:true,initialPrincipal:10000,interestRate:10,billingType:'interest',fixedAmount:0,startDate:'2026-09-15',baseDueDay:15,payments:[],movements:[]});
-const fixtures=['parcel','partial','payoff','amort','early','other','switch'].map(id=>({id,name:'Cliente '+id,phone:'11999999999',level:'Bronze',creditLimit:20000,guarantees:[],crm:[],contracts:[loan(id)]}));
+const fixtures=['parcel','partial','payoff','amort','early','other','switch','only-parcel','only-partial','only-early'].map(id=>({id,name:'Cliente '+id,phone:'11999999999',level:'Bronze',creditLimit:20000,guarantees:[],crm:[],contracts:[loan(id)]}));
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true});const results=[],errors=[];
@@ -73,6 +73,25 @@ const fixtures=['parcel','partial','payoff','amort','early','other','switch'].ma
     await check('Trocar penhora por PIX não grava descrição de bem',async()=>{
       await open('switch','#v21Parcel');await penhora();await page.locator('#v21Method').selectOption('PIX');assert.equal(await page.locator('#v21PaymentDetails').isVisible(),false);
       await page.locator('#v21ConfirmParcel').click();await page.waitForSelector('#receiptTextV25');const p=(await info('switch')).k.payments[0];assert.equal(p.method,'PIX');assert.equal(p.paymentDetails,'');assert.equal(p.settlementInKind,false);
+    });
+    for(const [id,button,prefix,amountId] of [
+      ['only-parcel','#v21Parcel','v21','v21Amount'],
+      ['only-partial','#v21Partial','v21','v21PartialAmount'],
+      ['only-early','#v28EarlyClose','ec','ecAmount']
+    ])await check('Apenas amortização via forma de pagamento: '+id,async()=>{
+      await open(id,button);
+      await page.locator('#'+amountId).fill('500');
+      await page.locator('#'+prefix+'Note').fill('Abater somente o capital');
+      await page.locator('#'+prefix+'Method').selectOption('amortization-only');
+      assert.match(await page.locator('#modalContent h2').innerText(),/Apenas amortização/);
+      assert.equal(await page.locator('#v21Amount').inputValue(),'500');
+      assert.equal(await page.locator('#v21Note').inputValue(),'Abater somente o capital');
+      assert.equal((await info(id)).balance,10000,'seleção não registra baixa');
+      await page.locator('#v21ConfirmAmort').click();await page.waitForSelector('#receiptTextV25');
+      const x=await info(id);assert.equal(x.balance,9500);assert.equal(x.k.payments.length,0);
+      assert.equal(x.k.movements.length,1);assert.equal(x.k.movements[0].type,'amortization');
+      assert.equal(x.k.movements[0].method,'PIX');assert.equal(x.k.active,true);
+      assert.match(await page.locator('#receiptTextV25').inputValue(),/500,00/);
     });
     await check('Dados sobrevivem ao recarregamento e ao backup JSON',async()=>{
       await page.reload();await page.waitForFunction(()=>window.testBooted);

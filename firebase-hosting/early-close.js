@@ -162,11 +162,11 @@
       <h3>Registrar valor recebido</h3>
       <div class="field"><label for="ecAmount">Valor recebido</label><input id="ecAmount" type="number" step="0.01" min="0.01" max="${money(s.total).toFixed(2)}" inputmode="decimal" value="${esc(amountValue??money(s.total).toFixed(2))}"></div>
       <div class="card"><div class="v21-summary" id="ecPreview"></div><div class="muted" id="ecOutcome" style="margin-top:8px"></div></div>
-      ${PaymentMethods.fields('ec')}
+      ${PaymentMethods.fields('ec',{},true)}
       <div class="field"><label>Observação</label><textarea id="ecNote"></textarea></div>
       <div class="actions"><button type="button" class="primary-btn" id="ecConfirm">Confirmar registro</button><button type="button" class="soft-btn" id="ecBack">Voltar</button></div>
       <div class="rule-note">O valor recebido paga primeiro os juros em atraso, depois os juros proporcionais; o restante abate o capital. Se cobrir o total, o contrato é quitado e encerrado. Se não cobrir, o contrato continua ativo com o capital reduzido.</div>`,()=>{
-      PaymentMethods.bind('ec');
+      PaymentMethods.bind('ec',()=>window.switchToAmortizationV21(clientId,contractId,s.period.ref,'ecAmount','ec'));
       const amount=document.getElementById('ecAmount'),preview=document.getElementById('ecPreview'),outcome=document.getElementById('ecOutcome'),confirmBtn=document.getElementById('ecConfirm');
       function refresh(){
         const a=allocate(s,Math.max(0,cents(amount.value)));
