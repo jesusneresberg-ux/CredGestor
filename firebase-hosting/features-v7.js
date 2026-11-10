@@ -61,6 +61,7 @@
   }
   function suggestedTotalV7(k,installments){
     const n=Math.max(1,Number(installments)||1),principal=Number(k.initialPrincipal)||0;
+    if(k.billingType==='amortization')return principal;
     if(k.billingType==='fixed'&&Number(k.fixedAmount)>0)return Number(k.fixedAmount)*n;
     return principal+(principal*(Number(k.interestRate)||0)/100*n);
   }

@@ -53,7 +53,7 @@
   function firstDueV21(k){const d=typeof firstPaymentDate==='function'?firstPaymentDate(k):null;return d?ymd(d):''}
   function currentBalanceV21(k){try{return Math.max(0,Number(contractBalance(k))||0)}catch(_){return Math.max(0,Number(k?.currentPrincipal)||Number(k?.initialPrincipal)||0)}}
   function currentInterestV21(k){
-    const bal=currentBalanceV21(k);if(bal<=0)return 0;
+    const bal=currentBalanceV21(k);if(bal<=0||k?.billingType==='amortization')return 0;
     if(k?.billingType==='interest')return Math.max(0,bal*(Number(k?.interestRate)||0)/100);
     const initial=Math.max(0,Number(k?.initialPrincipal)||0),summary=Math.max(0,Number(k?.summaryTotal)||0);
     if(initial>0&&summary>initial)return Math.max(0,(summary-initial)*(bal/initial));
@@ -192,6 +192,7 @@
       document.getElementById('v21Parcel').insertAdjacentHTML('afterend','<button type="button" class="v21-choice" id="v21Partial"><span class="ico">🧾</span><span><b>Pagamento parcial</b><small>Registrar adiantamento e enviar o saldo restante para quitar o mês.</small></span></button>');
       document.getElementById('v21Partial').onclick=()=>openPartialV21(clientId,contractId,useRef);
       document.getElementById('v21Amortize').onclick=()=>openAmortizeV21(clientId,contractId,useRef);
+      if(k.billingType==='amortization'){select.hidden=true;document.getElementById('v21Parcel').hidden=true;document.getElementById('v21Partial').hidden=true;}
       document.getElementById('v21Payoff').onclick=()=>openPayoffV21(clientId,contractId,useRef);
     });
   }

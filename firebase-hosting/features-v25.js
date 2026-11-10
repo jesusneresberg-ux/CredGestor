@@ -12,7 +12,7 @@
     if(m)return `${m[3]}/${m[2]}/${m[1]}`;
     const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('pt-BR');
   }
-  function rateV25(k){return Math.max(0,numV25(k?.interestRate))}
+  function rateV25(k){if(k?.billingType==='amortization')return 0;return Math.max(0,numV25(k?.interestRate))}
   function balanceV25(k){
     try{return Math.max(0,numV25(contractBalance(k)))}catch(_){
       return Math.max(0,numV25(k?.currentPrincipal)||numV25(k?.initialPrincipal));
@@ -75,7 +75,7 @@
       interest,
       charge,
       total:principal+interest,
-      modality:k?.modality||'Padrão'
+      modality:k?.billingType==='amortization'?'Apenas amortização':k?.modality||'Padrão'
     };
   }
 

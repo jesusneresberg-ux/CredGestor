@@ -21,7 +21,7 @@
     try{localStorage.setItem(KEY,raw);}catch(_){throw Error('Falta espaço no aparelho para a carteira. A cópia original permanece na nuvem.');}
   }
   async function launch(){
-    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=apenas-amortizacao19';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
+    for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=name+'?v=contrato-amortizacao20';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);});}
     const reversed=window.CrediGestorCapitalization.reverseAutomatic();
     if(reversed)openModal('<h2>Juros automáticos retirados</h2><p>Foram retirados '+brl(reversed.total)+' de '+reversed.contracts+' contrato(s), referentes à atualização automática anterior.</p><p>Pagamentos e movimentos manuais foram preservados. Uma cópia anterior foi guardada neste aparelho. Novos juros de atraso devem ser lançados em Pagamentos → Inserir juros de atraso.</p>');
     document.getElementById('accountQuickBtn').onclick=openAccount;

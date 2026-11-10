@@ -90,7 +90,7 @@ function contractBalance(c){
   return Math.max(0,(Number(c.initialPrincipal)||0)+(c.movements||[]).reduce((t,m)=>t+(m.type==='increase'?Number(m.amount):-Number(m.amount)),0));
 }
 function monthlyDue(c){
-  if(isPaidContract(c))return 0;
+  if(isPaidContract(c)||c.billingType==='amortization')return 0;
   const bal=contractBalance(c);
   if(c.billingType==='fixed') return Number(c.fixedAmount)||0;
   return bal*(Number(c.interestRate)||0)/100;
@@ -134,7 +134,7 @@ function chargeFor(cl,c,year,monthIndex){
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
   const paid=paymentTotalForMonth(c,ref),remaining=Math.max(0,Math.round((amount-paid)*100))/100;
-  const status=beforeFirst?'not_due':remaining===0?'paid':d0<now?'late':'open';
+  const status=beforeFirst||c.billingType==='amortization'?'not_due':remaining===0?'paid':d0<now?'late':'open';
   return {cl,c,ref,due,payment,amount,status,firstDue,paid,remaining};
 }
 function allChargesAround(){
@@ -452,7 +452,7 @@ function openClientDetail(id){
 function contractHtml(c,k){
   return `<div class="contract-card">
     <div class="row space">
-      <div><div class="title">${esc(k.title||'Contrato')}</div><div class="muted">Dia-base ${k.baseDueDay} • ${k.billingType==='fixed'?'parcela fixa':`${k.interestRate}% a.m. sobre saldo`}</div></div>
+      <div><div class="title">${esc(k.title||'Contrato')}</div><div class="muted">Dia-base ${k.baseDueDay} • ${k.billingType==='amortization'?'Apenas amortização':k.billingType==='fixed'?'parcela fixa':`${k.interestRate}% a.m. sobre saldo`}</div></div>
       <span class="status ${k.active===false?'late':'paid'}">${k.active===false?'ENCERRADO':'ATIVO'}</span>
     </div>
     <div class="row space" style="margin-top:10px">
@@ -471,7 +471,7 @@ function openContractModal(clientId, contractId){
       <div class="field"><label>Capital inicial</label><input id="kPrincipal" type="number" step="0.01" value="${k?.initialPrincipal||''}" ${k?'disabled':''}></div>
       <div class="field"><label>Dia-base do vencimento</label><input id="kDay" type="number" min="1" max="31" value="${k?.baseDueDay||1}"></div>
     </div>
-    <div class="field"><label>Forma de cobrança</label><select id="kType"><option value="interest" ${k?.billingType!=='fixed'?'selected':''}>Juros mensais sobre o saldo</option><option value="fixed" ${k?.billingType==='fixed'?'selected':''}>Parcela fixa</option></select></div>
+    <div class="field"><label>Forma de cobrança</label><select id="kType"><option value="interest" ${!k||!['fixed','amortization'].includes(k.billingType)?'selected':''}>Juros mensais sobre o saldo</option><option value="fixed" ${k?.billingType==='fixed'?'selected':''}>Parcela fixa</option><option value="amortization" ${k?.billingType==='amortization'?'selected':''}>Apenas amortização</option></select></div>
     <div class="two">
       <div class="field"><label>Juros (% ao mês)</label><input id="kRate" type="number" step="0.01" value="${k?.interestRate||''}"></div>
       <div class="field"><label>Parcela fixa</label><input id="kFixed" type="number" step="0.01" value="${k?.fixedAmount||''}"></div>
@@ -483,13 +483,20 @@ function openContractModal(clientId, contractId){
     <div class="rule-note">O dia-base nunca é perdido. Se o contrato for dia 31, fevereiro vence em 28/29 e setembro em 30, mas volta ao dia 31 nos meses que o possuem.</div>
     <div class="actions"><button type="button" class="primary-btn" id="saveContractBtn">Salvar contrato</button></div>
   `,()=>{
+    const type=document.getElementById('kType'),rate=document.getElementById('kRate'),fixed=document.getElementById('kFixed');
+    const refreshBilling=()=>{
+      const only=type.value==='amortization';
+      for(const input of [rate,fixed]){input.disabled=only;input.closest('.field').hidden=only;if(only)input.value='0';}
+    };
+    type.addEventListener('change',refreshBilling);refreshBilling();
     document.getElementById('saveContractBtn').onclick=()=>{
       const day=Math.max(1,Math.min(31,Number(document.getElementById('kDay').value)||1));
+      const onlyAmortization=document.getElementById('kType').value==='amortization';
       if(k){
-        Object.assign(k,{title:document.getElementById('kTitle').value.trim(),baseDueDay:day,billingType:document.getElementById('kType').value,interestRate:Number(document.getElementById('kRate').value)||0,fixedAmount:Number(document.getElementById('kFixed').value)||0,startDate:document.getElementById('kStart').value,active:document.getElementById('kActive').value==='1'});
+        Object.assign(k,{title:document.getElementById('kTitle').value.trim(),baseDueDay:day,billingType:document.getElementById('kType').value,interestRate:onlyAmortization?0:Number(document.getElementById('kRate').value)||0,fixedAmount:onlyAmortization?0:Number(document.getElementById('kFixed').value)||0,startDate:document.getElementById('kStart').value,active:document.getElementById('kActive').value==='1'});
       }else{
         const principal=Number(document.getElementById('kPrincipal').value)||0;
-        c.contracts.push({id:uid('ct'),title:document.getElementById('kTitle').value.trim()||'Contrato',initialPrincipal:principal,baseDueDay:day,billingType:document.getElementById('kType').value,interestRate:Number(document.getElementById('kRate').value)||0,fixedAmount:Number(document.getElementById('kFixed').value)||0,startDate:document.getElementById('kStart').value,active:true,movements:[],payments:[],lateHistory:0,createdAt:new Date().toISOString()});
+        c.contracts.push({id:uid('ct'),title:document.getElementById('kTitle').value.trim()||'Contrato',initialPrincipal:principal,baseDueDay:day,billingType:document.getElementById('kType').value,interestRate:onlyAmortization?0:Number(document.getElementById('kRate').value)||0,fixedAmount:onlyAmortization?0:Number(document.getElementById('kFixed').value)||0,startDate:document.getElementById('kStart').value,active:true,movements:[],payments:[],lateHistory:0,createdAt:new Date().toISOString()});
       }
       saveState();closeModal();openClientDetail(clientId);
     };

@@ -148,7 +148,7 @@ openClientDetail=function(id){
 // ---------- EMPRÉSTIMOS ----------
 function loanCard2({cl,k}){
   const active=k.active!==false&&!isPaidContract(k);
-  const mode=k.billingType==='fixed'?`Parcela ${brl(k.fixedAmount)}`:`${Number(k.interestRate)||0}% a.m.`;
+  const mode=k.billingType==='amortization'?'Apenas amortização':k.billingType==='fixed'?`Parcela ${brl(k.fixedAmount)}`:`${Number(k.interestRate)||0}% a.m.`;
   return `<div class="list-item loan-card">
     <div class="row space"><div class="row loan-main-row"><div class="avatar">💰</div><div><div class="title">${esc(k.title||'Empréstimo')}</div><div class="muted">${esc(cl.name)}${cl.cpf?` • CPF ${esc(formatCPF2(cl.cpf))}`:''}</div></div></div><span class="status ${active?'paid':'late'}">${active?'ATIVO':'ENCERRADO'}</span></div>
     <div class="loan-numbers"><div><span>Saldo atual</span><strong>${brl(contractBalance(k))}</strong></div><div><span>Cobrança mensal</span><strong>${brl(monthlyDue(k))}</strong></div></div>

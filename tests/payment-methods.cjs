@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{
   fs.readFile(file,(e,data)=>{if(e)res.writeHead(404).end();else{res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(data)}});
 });
 const loan=id=>({id:id+'-loan',title:id+'-loan',active:true,initialPrincipal:10000,interestRate:10,billingType:'interest',fixedAmount:0,startDate:'2026-09-15',baseDueDay:15,payments:[],movements:[]});
-const fixtures=['parcel','partial','payoff','amort','early','other','switch','only-parcel','only-partial','only-early'].map(id=>({id,name:'Cliente '+id,phone:'11999999999',level:'Bronze',creditLimit:20000,guarantees:[],crm:[],contracts:[loan(id)]}));
+const fixtures=['parcel','partial','payoff','amort','early','other','switch','only-parcel','only-partial','only-early','new-only'].map(id=>({id,name:'Cliente '+id,phone:'11999999999',level:'Bronze',creditLimit:20000,guarantees:[],crm:[],contracts:[loan(id)]}));
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true});const results=[],errors=[];
@@ -93,9 +93,31 @@ const fixtures=['parcel','partial','payoff','amort','early','other','switch','on
       assert.equal(x.k.movements[0].method,'PIX');assert.equal(x.k.active,true);
       assert.match(await page.locator('#receiptTextV25').inputValue(),/500,00/);
     });
+    await check('Novo contrato apenas amortização: cadastro, saldo e juros zero',async()=>{
+      await page.evaluate(()=>openContractModal('new-only'));
+      await page.locator('#kPrincipal').fill('1000');
+      await page.locator('#kRate').fill('20');
+      await page.locator('#kType').selectOption('amortization');
+      assert.equal(await page.locator('#kRate').isDisabled(),true);
+      assert.equal(await page.locator('#kFixed').isDisabled(),true);
+      await page.locator('#saveContractBtn').click();
+      const created=await page.evaluate(()=>{
+        const cl=state.clients.find(c=>c.id==='new-only'),k=cl.contracts.find(k=>k.billingType==='amortization');
+        return {k,balance:contractBalance(k),monthly:monthlyDue(k),charge:chargeFor(cl,k,2026,11),receipt:contractReceiptBlockV25(cl,k)};
+      });
+      assert.equal(created.balance,1000);assert.equal(created.monthly,0);
+      assert.equal(created.k.interestRate,0);assert.equal(created.k.fixedAmount,0);
+      assert.equal(created.charge.status,'not_due');assert.match(created.receipt,/Modalidade: Apenas amortização/);
+      await page.evaluate(id=>window.openPaymentsHubV21('new-only',id),created.k.id);
+      assert.equal(await page.locator('#v21Parcel').isVisible(),false);
+      await page.locator('#v21Amortize').click();await page.locator('#v21Amount').fill('250');
+      await page.locator('#v21ConfirmAmort').click();await page.waitForSelector('#receiptTextV25');
+      const after=await page.evaluate(id=>{const k=state.clients.find(c=>c.id==='new-only').contracts.find(k=>k.id===id);return {balance:contractBalance(k),interest:k.currentInterest,monthly:monthlyDue(k),payments:k.payments}},created.k.id);
+      assert.equal(after.balance,750);assert.equal(after.interest,0);assert.equal(after.monthly,0);assert.equal(after.payments.length,0);
+    });
     await check('Dados sobrevivem ao recarregamento e ao backup JSON',async()=>{
       await page.reload();await page.waitForFunction(()=>window.testBooted);
-      const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem(DB_KEY)));const p=saved.clients.find(x=>x.id==='parcel').contracts[0].payments[0];assert.equal(p.method,'Penhora');assert.match(p.paymentDetails,/Chácara/);assert.equal(p.settlementInKind,true);
+      const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem(DB_KEY)));const only=saved.clients.find(c=>c.id==='new-only').contracts.find(k=>k.billingType==='amortization');assert.equal(only.currentPrincipal,750);assert.equal(only.interestRate,0);const p=saved.clients.find(x=>x.id==='parcel').contracts[0].payments[0];assert.equal(p.method,'Penhora');assert.match(p.paymentDetails,/Chácara/);assert.equal(p.settlementInKind,true);
     });
   }finally{
     console.log(JSON.stringify({results,errors},null,2));await browser.close();server.close();
