@@ -1,5 +1,6 @@
 
-const DB_KEY = 'credigestor_single_owner_v25';
+const WALLET_SESSION = window.CREDIGESTOR_WALLET_SESSION;
+const DB_KEY = WALLET_SESSION?.key || 'credigestor_single_owner_v25';
 const THEMES = {
   oceano:{name:'Oceano',accent:'#0369a1',accent2:'#0891b2',wallpaper:'linear-gradient(145deg,#f0f9ff,#cffafe)'},
   ametista:{name:'Ametista',accent:'#7c3aed',accent2:'#a21caf',wallpaper:'linear-gradient(145deg,#faf5ff,#ede9fe)'},
@@ -59,6 +60,7 @@ function loadState(){
   }catch(e){ return defaultState(); }
 }
 function saveState(){
+  if(WALLET_SESSION&&(firebase.auth().currentUser?.uid!==WALLET_SESSION.uid))throw Error('Entre novamente na sua conta antes de salvar.');
   if(window.CREDIGESTOR_MULTITENANT){
     try{
       if(!window.CrediGestorCloud)throw Error('Aguarde a conexão com sua conta.');
@@ -151,7 +153,7 @@ function delinquencyRate(){
   return 100*arr.filter(x=>x.status==='late').length/arr.length;
 }
 const appearanceCache=new Map();
-function appearanceKey(){if(window.CREDIGESTOR_SINGLE_USER)return "credigestor_appearance:r7XvaVZzBhglpaMAuMlBXuipBBt1:org_r7XvaVZzBhglpaMAuMlBXuipBBt1";const s=window.CrediGestorCloud?.session();return s?.user?`credigestor_appearance:${s.user.uid}:${s.organizationId}`:window.CREDIGESTOR_MULTITENANT?null:'credigestor_appearance:local';}
+function appearanceKey(){if(window.CREDIGESTOR_SINGLE_USER){const id=WALLET_SESSION?.uid;if(!id)return "credigestor_appearance:r7XvaVZzBhglpaMAuMlBXuipBBt1:org_r7XvaVZzBhglpaMAuMlBXuipBBt1";return `credigestor_appearance:${id}:org_${id}`;}const s=window.CrediGestorCloud?.session();return s?.user?`credigestor_appearance:${s.user.uid}:${s.organizationId}`:window.CREDIGESTOR_MULTITENANT?null:'credigestor_appearance:local';}
 function appearanceTheme(){const key=appearanceKey();if(!key)return '';if(!appearanceCache.has(key)){try{appearanceCache.set(key,localStorage.getItem(key)||'');}catch(_){appearanceCache.set(key,'');}}return appearanceCache.get(key);}
 function chooseTheme(theme){
   if(!THEMES[theme])return;
