@@ -1,6 +1,6 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..',process.env.SITE_DIR||'');
+const root=path.resolve(__dirname,'../firebase-hosting');
 const server=http.createServer((req,res)=>{
   const p=new URL(req.url,'http://localhost').pathname,file=path.join(root,p==='/'?'index.html':p);
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
@@ -14,15 +14,18 @@ const clients=[{id:'ana',name:'Ana',phone:'11999999999',level:'Bronze',creditLim
   const browser=await chromium.launch({headless:true});const results=[],errors=[];
   const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Sao_Paulo',serviceWorkers:'block'});
   await context.route(/https:\/\//,r=>r.abort());
+  await context.route('**/personal-login.js*',r=>r.fulfill({contentType:'application/javascript',body:
+    '(async()=>{document.getElementById("app").style.display="";document.body.dataset.v26Locked="false";document.getElementById("v261Boot").remove();for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS)await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=name;s.onload=resolve;s.onerror=reject;document.body.appendChild(s);});window.testBooted=true;})()'}));
   const page=await context.newPage();page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
   await page.clock.install({time:new Date('2026-10-08T15:00:00Z')});
   await page.addInitScript(clients=>{
-    if(!localStorage.getItem('credigestor_v1'))localStorage.setItem('credigestor_v1',JSON.stringify({clients}));
+    if(!localStorage.getItem('credigestor_single_owner_v25'))localStorage.setItem('credigestor_single_owner_v25',JSON.stringify({clients}));
     window.sent=[];window.open=url=>{window.sent.push(url);return null};
   },clients);
   async function check(name,fn){try{await fn();results.push({name,passed:true})}catch(e){results.push({name,passed:false,error:e.message})}}
   try{
     await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.waitForFunction(()=>window.testBooted);
     await check('Botão na ficha do cliente abre o histórico com totais',async()=>{
       await page.evaluate(()=>openClientDetail('ana'));
       await page.locator('#phOpenBtn').click();
@@ -43,7 +46,7 @@ const clients=[{id:'ana',name:'Ana',phone:'11999999999',level:'Bronze',creditLim
       await page.locator('.ph-item[data-ph-id="p1"] .ph-delete').click();
       assert.equal(await page.locator('.ph-item').count(),1);
       const ids=await page.evaluate(()=>state.clients[0].contracts[0].payments.map(p=>p.id));assert.deepEqual(ids,['p2']);
-      const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('credigestor_v1')).clients[0].contracts[0].payments.length);assert.equal(saved,1);
+      const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('credigestor_single_owner_v25')).clients[0].contracts[0].payments.length);assert.equal(saved,1);
     });
     await check('Sem erros de página',async()=>assert.deepEqual(errors,[]));
   }finally{await browser.close();server.close()}
