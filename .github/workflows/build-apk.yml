@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-33 build-tools;33.0.2
+          log-accepted-android-sdk-licenses: false
       - run: npm install --ignore-scripts --package-lock=false
       - run: node scripts/prepare-android.cjs
       - run: npx cap add android
