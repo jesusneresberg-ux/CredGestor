@@ -1,0 +1,33 @@
+const {chromium}=require('playwright');
+const fs=require('fs'),assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});const page=await browser.newPage();
+ await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><body></body>'}));
+ await page.goto('http://credigestor.test');
+ await page.evaluate(()=>{
+  document.body.innerHTML='<div id="app"></div><dialog id="modal"></dialog>';
+  window.CREDIGESTOR_PERSONAL_SCRIPTS=[];
+  window.CREDIGESTOR_FIREBASE_CONFIG={};
+  window.CrediGestorCore={validate:x=>x};
+  localStorage.setItem('credigestor_single_owner_v25','{}');
+  window.calls=[];
+  const owner={uid:'r7XvaVZzBhglpaMAuMlBXuipBBt1',email:'owner@example.com',emailVerified:true};
+  const auth={currentUser:owner,setPersistence:async()=>{},onAuthStateChanged:fn=>{window.listener=fn;fn(owner)},signInWithEmailAndPassword:async(e,p)=>{calls.push([e,p]);return {user:auth.currentUser}},sendPasswordResetEmail:async e=>calls.push(['reset',e])};
+  window.firebase={initializeApp:()=>{},auth:Object.assign(()=>auth,{Auth:{Persistence:{LOCAL:'local'}}})};
+  window.renderSettings=()=>{};window.currentView='dashboard';window.CrediGestorCapitalization={reverseAutomatic:()=>0};window.render=()=>{};
+  const b=document.createElement('button');b.id='accountQuickBtn';document.body.append(b);
+ });
+ await page.addScriptTag({content:fs.readFileSync('firebase-hosting/personal-login.js','utf8')});
+ await page.waitForSelector('#personalForm');
+ assert.equal(await page.locator('#app').evaluate(e=>e.inert),true,'persisted session must remain locked');
+ assert.equal(await page.locator('#personalBio').isHidden(),true,'no fake biometric fallback');
+ await page.fill('#loginEmail','owner@example.com');await page.fill('#loginPassword','secret123');await page.click('#personalForm button');
+ await page.waitForFunction(()=>document.body.dataset.v26Locked==='false');
+ assert.deepEqual(await page.evaluate(()=>calls[0]),['owner@example.com','secret123']);
+ await page.evaluate(()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});document.dispatchEvent(new Event('visibilitychange'))});
+ assert.equal(await page.locator('#app').evaluate(e=>e.inert),true);
+ await page.evaluate(()=>{firebase.auth().currentUser={uid:'other',emailVerified:true};listener(firebase.auth().currentUser)});
+ assert.match(await page.locator('#personalMessage').innerText(),/conta principal/);
+ assert.equal(await page.locator('#app').isVisible(),false);
+ await browser.close();console.log('PASS: locked persisted session, password login, background lock, owner restriction, no biometric bypass');
+})().catch(e=>{console.error(e);process.exit(1)});
