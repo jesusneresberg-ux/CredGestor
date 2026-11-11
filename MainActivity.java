@@ -11,18 +11,11 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(CrediBiometricPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Registrar plugins adicionais aqui, se necessário
         // registerPlugin(MeuPluginCustomizado.class);
     }
 
-    @Override
-    public void onBackPressed() {
-        // Comportamento do botão voltar
-        // Deixa o Capacitor gerenciar a navegação
-        if (!getBridge().onBackPressed()) {
-            super.onBackPressed();
-        }
-    }
 }
