@@ -25,7 +25,7 @@
     const token=++epoch;
     if(!explicit&&!unlocked){lock('Entre com e-mail e senha para continuar.');return;}
     lock('Preparando sua carteira…');
-    try{await seed(user,token);if(token!==epoch)return;if(!started){await launch();started=true;}if(token!==epoch||auth.currentUser?.uid!==OWNER)return;unlocked=true;document.body.dataset.v26Locked='false';document.body.dataset.v26Role='administrador';document.getElementById('app').style.display='';document.getElementById('app').inert=false;document.getElementById('modal').inert=false;gate.style.display='none';}catch(e){if(token===epoch)lock(errorText(e),true);}
+    try{await seed(user,token);if(token!==epoch)return;if(!started){await launch();started=true;}if(token!==epoch||auth.currentUser?.uid!==OWNER)return;if(document.hidden){lock('Aplicativo bloqueado. Entre novamente ou use a biometria.');return;}unlocked=true;document.body.dataset.v26Locked='false';document.body.dataset.v26Role='administrador';document.getElementById('app').style.display='';document.getElementById('app').inert=false;document.getElementById('modal').inert=false;gate.style.display='none';}catch(e){if(token===epoch)lock(errorText(e),true);}
   }
   function archive(value,key){return new Promise((resolve,reject)=>{const r=indexedDB.open('credigestor-individual-recovery',1);r.onupgradeneeded=()=>r.result.createObjectStore('snapshots');r.onerror=()=>reject(Error('Não foi possível criar a cópia de recuperação no aparelho.'));r.onsuccess=()=>{const db=r.result,tx=db.transaction('snapshots','readwrite');tx.objectStore('snapshots').put(value,key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(Error('Não foi possível preservar a cópia de recuperação.'));};};});}
   async function seed(user,token){

@@ -47,3 +47,12 @@ html[data-color-mode="dark"] .v21-pay-btn{background:#1e3a5f!important;color:#bf
 html[data-color-mode="dark"] .v6-whatsapp{background:#14532d!important;color:#dcfce7!important}
 html[data-color-mode="dark"] .v21-zero{color:#86efac}
 html[data-color-mode="dark"] .v6-color-field{background:#243247}
+
+/* Login no celular: campos legíveis e acesso com o teclado aberto. */
+.v26-auth-overlay{overflow-y:auto}
+.v26-auth-card{max-height:calc(100dvh - 40px);overflow-y:auto}
+.v26-auth-card label{display:grid;gap:6px;margin:14px 0;font-weight:600}
+.v26-auth-card input{width:100%;min-width:0;padding:12px;border:1px solid #94a3b8;border-radius:10px;font-size:16px}
+.v26-auth-card button{min-height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:10px;background:#eff6ff;color:#1e3a8a}
+.v26-auth-card button[type="submit"]{background:#2563eb;color:white;border-color:#2563eb}
+.v26-auth-card button:disabled{opacity:.6;cursor:wait}
