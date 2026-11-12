@@ -8,9 +8,9 @@
     interestMode:'calendar_days',
     assistantDefault:'due_today',
     includePix:true,
-    includeBreakdown:true,
+    includeBreakdown:false,
     templates:{
-      due_today:'Olá, {nome}. Passando para lembrar que sua cobrança de {valor_atualizado}, referente a {referencia}, vence hoje ({vencimento}).{juros_bloco}{pix_bloco}',
+      due_today:'Olá, {nome}. Passando para lembrar que sua cobrança de {valor_atualizado}, referente a {referencia}, vence hoje ({vencimento}).{pix_bloco}',
       upcoming:'Olá, {nome}. Sua cobrança de {valor_atualizado}, referente a {referencia}, vence em {vencimento}.{juros_bloco}{pix_bloco}',
       overdue:'Olá, {nome}. Consta em aberto a cobrança referente a {referencia}, vencida em {vencimento}. Valor atualizado até {data_atual}: {valor_atualizado}.{juros_bloco}{pix_bloco}',
       negotiate:'Olá, {nome}. Estou entrando em contato sobre a cobrança referente a {referencia}. O valor atualizado até {data_atual} é {valor_atualizado}. Se precisar, podemos alinhar a melhor forma de regularização.{juros_bloco}{pix_bloco}',
@@ -52,6 +52,14 @@
     if(typeof s.includeBreakdown!=='boolean')s.includeBreakdown=DEFAULTS.includeBreakdown;
     s.templates=s.templates||{};
     Object.entries(DEFAULTS.templates).forEach(([k,v])=>{if(!s.templates[k])s.templates[k]=v});
+    // Modelo solicitado pelo titular: aplicar também à carteira já existente.
+    // Os dados PIX da RJOTA pertencem somente à conta do titular.
+    if(window.CREDIGESTOR_WALLET_SESSION?.uid==='r7XvaVZzBhglpaMAuMlBXuipBBt1'&&!s.rjotaReminderDefault202611){
+      s.assistantDefault='due_today';s.includePix=true;s.includeBreakdown=false;
+      s.templates.due_today=DEFAULTS.templates.due_today;
+      state.settings.pixType='CNPJ';state.settings.pixKey='48379018000172';state.settings.pixName='RJOTA COMÉRCIO';
+      s.rjotaReminderDefault202611=true;
+    }
     return s;
   }
   ensureSettings22();
