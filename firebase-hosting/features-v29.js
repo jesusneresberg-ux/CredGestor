@@ -28,7 +28,7 @@
     // Historicamente os pagamentos são datados; não usar lançamentos futuros
     // para abater o saldo de uma consulta retroativa.
     const paid=cents((k.payments||[]).filter(p=>matching(p,row.ref)&&ordinal(day(p.paidAt||p.date)||asOf)<=ordinal(asOf))
-      .reduce((total,p)=>total+Math.max(0,Number(p.amount)||0),0));
+      .reduce((total,p)=>total+Math.max(0,Number(p.amount)||0)+Math.max(0,Number(p.discountAmount)||0),0));
     const due=day(row.due||row.originalDue),remaining=Math.max(0,base+extra.cents-paid);
     row.baseAmount=money(base);row.lateInterest=money(extra.cents);row.lateDays=extra.days;
     row.amount=money(base+extra.cents);row.paid=money(paid);row.remaining=money(remaining);

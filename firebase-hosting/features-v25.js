@@ -108,6 +108,7 @@
   function paymentReceiptV25(cl,k,p){
     return contractBlockV25(cl,k,'Comprovante de Pagamento')+`\n\n`+
       `✅ Valor pago: ${moneyV25(p?.amount||0)}\n`+
+      PaymentDiscount.receipt(p)+
       `📅 Data do pagamento: ${fmtDateV25(p?.paidAt)}\n`+
       PaymentMethods.receipt(p)+
       `🗓️ Referência: ${p?.reference||'—'}\n`+
@@ -132,6 +133,7 @@
       `💰 Capital pago: ${moneyV25(p?.principalAmount||0)}\n`+
       `📊 Juros pagos: ${moneyV25(p?.interestAmount||0)}\n`+
       `💵 Total pago: *${moneyV25(p?.amount||0)}*\n`+
+      PaymentDiscount.receipt(p)+
       `📅 Data da quitação: ${fmtDateV25(p?.paidAt)}\n`+
       `💳 Saldo final: ${moneyV25(0)}\n`+
       PaymentMethods.receipt(p)+

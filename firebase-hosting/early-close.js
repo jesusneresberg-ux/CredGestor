@@ -97,11 +97,13 @@
     if(k.active===false||isPaidContract(k))throw Error('Este contrato já está encerrado.');
     if(!Number.isFinite(amountCents)||amountCents<=0)throw Error('Informe o valor recebido.');
     if(amountCents>s.total)throw Error(`O valor recebido passa do total para quitação (${brl(money(s.total))}). Informe até esse valor.`);
-    const a=allocate(s,amountCents),paidAt=s.closingISO,now=new Date().toISOString(),previous=JSON.parse(JSON.stringify(k));
+    const discountAmount=PaymentDiscount.validate(paymentDetails.discountAmount??0,money(s.total)),discountCents=cents(discountAmount);
+    if(discountCents>0&&amountCents+discountCents!==s.total)throw Error('Para aplicar desconto na quitação, o valor recebido mais o desconto devem cobrir o total. Para descontar uma parcela, use Pagar Parcela.');
+    const a=allocate(s,amountCents+discountCents),paidAt=s.closingISO,now=new Date().toISOString(),previous=JSON.parse(JSON.stringify(k));
     const detail={closingDate:paidAt,periodStart:ymd(s.period.from),periodEnd:ymd(s.period.to),daysElapsed:s.elapsed,periodDays:s.periodDays,principalBefore:money(s.principal),overdueInterest:money(a.overduePaid),proportionalInterest:money(a.proportional),capitalPaid:money(a.capital)};
     k.payments=k.payments||[];k.movements=k.movements||[];
     if(a.payoff){
-      const payment={...paymentMeta,id:uid('py'),reference:s.period.ref,amount:money(amountCents),principalAmount:money(s.principal),interestAmount:money(s.interest),paidAt,method,note:note||'Encerramento antecipado com juros proporcionais',status:'paid',type:'payoff',payoff:true,earlyTermination:true,statement:detail,createdAt:now};
+      const payment={...paymentMeta,id:uid('py'),reference:s.period.ref,amount:money(amountCents),discountAmount,settledAmount:money(s.total),principalDiscount:money(Math.max(0,discountCents-s.interest)),interestDiscount:money(Math.min(discountCents,s.interest)),principalAmount:money(s.principal-Math.max(0,discountCents-s.interest)),interestAmount:money(Math.max(0,s.interest-discountCents)),paidAt,method,note:note||'Encerramento antecipado com juros proporcionais',status:'paid',type:'payoff',payoff:true,earlyTermination:true,statement:detail,createdAt:now};
       k.payments.push(payment);
       if(s.principal>0)k.movements.push({...paymentMeta,method,id:uid('mv'),type:'amortization',amount:money(s.principal),date:paidAt,note:'Encerramento do contrato — capital quitado',balanceBefore:money(s.principal),balanceAfter:0,payoff:true,createdAt:now});
       Object.assign(k,{currentPrincipal:0,active:false,status:'paid',loanStatus:'paid',closed:true,closedAt:paidAt,paidOffAt:paidAt,paidOffEarly:true,closedReason:`Encerramento antecipado — capital + juros proporcionais (${s.elapsed}/${s.periodDays} dias)`,lastBalanceUpdate:paidAt,nextDueDate:'',notificationsDisabled:true,updatedAt:now});
@@ -139,12 +141,12 @@
   function resultText(cl,k,s,r,amountCents){
     const a=r.allocation;
     const paymentInfo=PaymentMethods.receipt(r.payment||r.movement||r.records?.[0]).trim();
-    if(r.type==='payoff')return [`🏦 *Contrato encerrado - ${code(k)}*`,``,`👤 Cliente: ${cl.name}`,`📅 Data: ${fmt(s.closing)}`,`💰 Capital quitado: ${brl(money(s.principal))}`,...(s.overdueTotal?[`⏳ Juros em atraso: ${brl(money(s.overdueTotal))}`]:[]),`📆 Juros proporcionais: ${brl(money(s.proportional))} (${s.elapsed} de ${s.periodDays} dias)`,`💵 Total pago: ${brl(money(amountCents))}`,``,`✅ Status: *QUITADO*`,paymentInfo].join('\n');
+    if(r.type==='payoff')return [`🏦 *Contrato encerrado - ${code(k)}*`,``,`👤 Cliente: ${cl.name}`,`📅 Data: ${fmt(s.closing)}`,`💰 Capital quitado: ${brl(money(s.principal))}`,...(s.overdueTotal?[`⏳ Juros em atraso: ${brl(money(s.overdueTotal))}`]:[]),`📆 Juros proporcionais: ${brl(money(s.proportional))} (${s.elapsed} de ${s.periodDays} dias)`,...(r.payment?.discountAmount>0?[`🏷️ Desconto concedido: ${brl(r.payment.discountAmount)}`]:[]),`💵 Total pago: ${brl(money(amountCents))}`,``,`✅ Status: *QUITADO*`,paymentInfo].join('\n');
     return [`🧾 *Pagamento com abatimento de capital*`,``,`👤 Cliente: ${cl.name}`,`📄 Contrato: ${code(k)}`,`📅 Data: ${fmt(s.closing)}`,`💵 Valor recebido: ${brl(money(amountCents))}`,``,...(a.overduePaid?[`⏳ Juros em atraso pagos: ${brl(money(a.overduePaid))}`]:[]),`📆 Juros proporcionais pagos: ${brl(money(a.proportional))} (${s.elapsed} de ${s.periodDays} dias)`,`📉 Capital abatido: ${brl(money(a.capital))}`,``,`💰 *Capital restante: ${brl(money(r.principalAfter))}*`,`🔁 Novo valor mensal: ${brl(monthlyDue(k))}`,paymentInfo].join('\n');
   }
 
   function row(label,value,cls=''){return `<div class="${cls}"><small>${label}</small><strong>${value}</strong></div>`}
-  function openEarlyClose(clientId,contractId,date,amountValue){
+  function openEarlyClose(clientId,contractId,date,amountValue,discountValue=0){
     const {cl,k}=find(clientId,contractId);if(!k)return;
     if(k.active===false||isPaidContract(k)){alert('Este contrato já está encerrado.');return}
     const closingISO=date||localToday();let s;
@@ -161,6 +163,7 @@
       <div class="actions"><button type="button" class="soft-btn" id="ecSendStatement">📤 Enviar extrato ao cliente</button></div>
       <h3>Registrar valor recebido</h3>
       <div class="field"><label for="ecAmount">Valor recebido</label><input id="ecAmount" type="number" step="0.01" min="0.01" max="${money(s.total).toFixed(2)}" inputmode="decimal" value="${esc(amountValue??money(s.total).toFixed(2))}"></div>
+      ${PaymentDiscount.fields('ec')}<div class="rule-note">Na quitação, o desconto reduz primeiro os juros e depois o capital. Para desconto em pagamento parcial, use Pagar Parcela.</div>
       <div class="card"><div class="v21-summary" id="ecPreview"></div><div class="muted" id="ecOutcome" style="margin-top:8px"></div></div>
       ${PaymentMethods.fields('ec',{},true)}
       <div class="field"><label>Observação</label><textarea id="ecNote"></textarea></div>
@@ -168,14 +171,18 @@
       <div class="rule-note">O valor recebido paga primeiro os juros em atraso, depois os juros proporcionais; o restante abate o capital. Se cobrir o total, o contrato é quitado e encerrado. Se não cobrir, o contrato continua ativo com o capital reduzido.</div>`,()=>{
       PaymentMethods.bind('ec',()=>window.switchToAmortizationV21(clientId,contractId,s.period.ref,'ecAmount','ec'));
       const amount=document.getElementById('ecAmount'),preview=document.getElementById('ecPreview'),outcome=document.getElementById('ecOutcome'),confirmBtn=document.getElementById('ecConfirm');
+      const discount=document.getElementById('ecDiscount');discount.value=String(discountValue);
       function refresh(){
-        const a=allocate(s,Math.max(0,cents(amount.value)));
+        const d=cents(discount.value),net=Math.max(0,s.total-d);
+        document.getElementById('ecDiscountPreview').textContent=`Total antes do desconto: ${brl(money(s.total))} • Total após desconto: ${brl(money(net))}`;
+        amount.max=money(net).toFixed(2);
+        const a=allocate(s,Math.max(0,cents(amount.value))+Math.max(0,d));
         preview.innerHTML=row('Juros em atraso pagos',brl(money(a.overduePaid)))+row('Juros proporcionais pagos',brl(money(a.proportional)))+row('Capital abatido',brl(money(a.capital)))+row('Capital restante',brl(money(s.principal-a.capital)),'v21-total');
         outcome.textContent=cents(amount.value)>s.total?`Valor acima do total para quitação (${brl(money(s.total))}).`:a.payoff?'Quita tudo: o contrato será encerrado.':a.capital>0?'Contrato continua ativo com o capital reduzido.':'Valor cobre apenas juros: o capital não muda.';
         confirmBtn.textContent=a.payoff?'Quitar e encerrar contrato':'Registrar e abater capital';
       }
-      amount.oninput=refresh;refresh();
-      document.getElementById('ecDate').onchange=e=>{if(e.target.value){const method=document.getElementById('ecMethod').value,details=document.getElementById('ecPaymentDetails').value,note=document.getElementById('ecNote').value;openEarlyClose(clientId,contractId,e.target.value,amount.value);document.getElementById('ecMethod').value=method;document.getElementById('ecMethod').dispatchEvent(new Event('change'));document.getElementById('ecPaymentDetails').value=details;document.getElementById('ecNote').value=note;}};
+      amount.oninput=refresh;discount.oninput=()=>{amount.value=money(Math.max(0,s.total-cents(discount.value))).toFixed(2);refresh()};refresh();
+      document.getElementById('ecDate').onchange=e=>{if(e.target.value){const method=document.getElementById('ecMethod').value,details=document.getElementById('ecPaymentDetails').value,note=document.getElementById('ecNote').value;openEarlyClose(clientId,contractId,e.target.value,amount.value,discount.value);document.getElementById('ecMethod').value=method;document.getElementById('ecMethod').dispatchEvent(new Event('change'));document.getElementById('ecPaymentDetails').value=details;document.getElementById('ecNote').value=note;}};
       document.getElementById('ecBack').onclick=()=>window.openPaymentsHubV21?window.openPaymentsHubV21(clientId,contractId):closeModal();
       document.getElementById('ecSendStatement').onclick=()=>window.prepareReceiptV25?window.prepareReceiptV25(cl,statementText(cl,k,s),'Extrato de encerramento pronto. Nenhum pagamento foi registrado.'):alert(statementText(cl,k,s));
       confirmBtn.onclick=async()=>{
@@ -183,9 +190,10 @@
         try{
           const value=cents(amount.value),fresh=statement(cl,k,s.closingISO);
           if(fresh.total!==s.total)throw Error('Os valores do contrato mudaram. Abra o encerramento novamente.');
-          const a=allocate(fresh,value);
-          if(value>0&&value<=fresh.total&&!confirm(a.payoff?`Encerrar o contrato recebendo ${brl(money(value))}?`:`Registrar ${brl(money(value))}: ${brl(money(a.overduePaid+a.proportional))} de juros e ${brl(money(a.capital))} de capital?`))return;
-          const r=register(cl,k,fresh,value,document.getElementById('ecMethod').value||'PIX',document.getElementById('ecNote').value.trim(),PaymentMethods.read('ec'));
+          const d=PaymentDiscount.validate(discount.value,money(fresh.total)),a=allocate(fresh,value+cents(d));
+          if(d>0&&value+cents(d)!==fresh.total)throw Error('Confira o valor recebido e o desconto para quitar o total.');
+          if(value>0&&value<=fresh.total&&!confirm(a.payoff?`Encerrar o contrato recebendo ${brl(money(value))}${d>0?` e concedendo desconto de ${brl(d)}`:''}?`:`Registrar ${brl(money(value))}: ${brl(money(a.overduePaid+a.proportional))} de juros e ${brl(money(a.capital))} de capital?`))return;
+          const r=register(cl,k,fresh,value,document.getElementById('ecMethod').value||'PIX',document.getElementById('ecNote').value.trim(),{...PaymentMethods.read('ec'),discountAmount:d});
           if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();
           closeModal();render();
           const text=resultText(cl,k,fresh,r,value),msg=r.type==='payoff'?'Contrato encerrado e quitado.':'Pagamento registrado e capital abatido.';
