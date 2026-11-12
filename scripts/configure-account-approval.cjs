@@ -38,4 +38,15 @@ const fs=require('node:fs');
  const verified=(await client.request({url:`${api}/${readback.rulesetName}`})).data;
  if(!verified.source.files.some(f=>f.content.includes('// CrediGestor account approval v1')))throw Error('Regras não confirmadas.');
  console.log('Aprovações protegidas por regras do servidor; regras anteriores preservadas.');
-})().catch(e=>{console.error('Falha ao configurar aprovações:',e.response?.status||'',e.response?.data?.error?.message||e.message);try{console.error('Conta de publicação:',JSON.parse(process.env.FIREBASE_DEPLOY_ACCOUNT||'{}').client_email||'não identificada');}catch(_){}process.exitCode=1;});
+})().catch(async e=>{
+ console.error('Falha ao configurar aprovações:',e.response?.status||'',e.response?.data?.error?.message||e.message);
+ try{
+  const credentials=JSON.parse(process.env.FIREBASE_DEPLOY_ACCOUNT||'{}');
+  console.error('Conta de publicação:',credentials.client_email||'não identificada');
+  const client=await new GoogleAuth({credentials,scopes:['https://www.googleapis.com/auth/cloud-platform']}).getClient();
+  const permissions=['firebaserules.releases.get','firebaserules.rulesets.get','firebaserules.rulesets.create','firebaserules.rulesets.test','firebaserules.releases.update'];
+  const result=(await client.request({url:'https://cloudresourcemanager.googleapis.com/v1/projects/credigestor-testes:testIamPermissions',method:'POST',data:{permissions}})).data;
+  console.error('Permissões de regras ausentes no projeto:',permissions.filter(p=>!result.permissions?.includes(p)).join(', ')||'nenhuma');
+ }catch(_){console.error('Não foi possível verificar as permissões efetivas do projeto.');}
+ process.exitCode=1;
+});
