@@ -104,7 +104,7 @@ function paymentTotalForMonth(c,ref){
   return (c.payments||[]).reduce((cents,p)=>{
     const pr=String(p.reference||p.ref||''),date=String(p.paidAt||p.date||'');
     const same=pr===ref||pr===String(ref).slice(5)||(!pr&&date.slice(0,7)===ref);
-    return cents+(same?Math.max(0,Math.round((Number(p.amount)||0)*100)):0);
+    return cents+(same?Math.max(0,Math.round(((Number(p.amount)||0)+(Number(p.discountAmount)||0))*100)):0);
   },0)/100;
 }
 function activeContracts(){

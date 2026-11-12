@@ -18,7 +18,7 @@
 
   function collect(cl){
     return (cl.contracts||[]).flatMap(k=>(k.payments||[]).map(p=>({
-      id:p.id,contractId:k.id,loan:k.title||'Contrato',amount:Number(p.amount)||0,
+      id:p.id,contractId:k.id,discountAmount:Number(p.discountAmount)||0,loan:k.title||'Contrato',amount:Number(p.amount)||0,
       date:String(p.paidAt||p.date||p.createdAt||'').slice(0,10),reference:p.reference||p.ref||'',
       paymentDetails:p.paymentDetails||'',settlementInKind:!!p.settlementInKind,type:phType(p),method:p.method||'',note:p.note||p.notes||'',remaining:p.remainingForMonth
     }))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -29,7 +29,7 @@
   function stats(list){const total=list.reduce((t,p)=>t+p.amount,0);return {total,count:list.length,avg:list.length?total/list.length:0}}
 
   function receiptText(cl,p){
-    return `🧾 *Comprovante de Pagamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${p.loan}\n🗓️ Referência: ${p.reference||'—'}\n📅 Data: ${phDate(p.date)}\n📌 Tipo: ${phTypeLabel(p.type)}\n💳 Forma: ${METHODS[phMethodKey(p.method)]?.replace(/^\S+\s/,'')||p.method||'—'}\n💰 Valor pago: ${brl(p.amount)}${Number.isFinite(Number(p.remaining))?`\n⏳ Restante do mês: ${brl(p.remaining)}`:''}${p.paymentDetails?`\n📝 ${p.settlementInKind?'Bem recebido':'Detalhes do pagamento'}: ${p.paymentDetails}`:''}${p.note?`\n📝 ${p.note}`:''}`;
+    return `🧾 *Comprovante de Pagamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${p.loan}\n🗓️ Referência: ${p.reference||'—'}\n📅 Data: ${phDate(p.date)}\n📌 Tipo: ${phTypeLabel(p.type)}\n💳 Forma: ${METHODS[phMethodKey(p.method)]?.replace(/^\S+\s/,'')||p.method||'—'}\n💰 Valor pago: ${brl(p.amount)}${p.discountAmount>0?`\n🏷️ Desconto concedido: ${brl(p.discountAmount)}`:''}${Number.isFinite(Number(p.remaining))?`\n⏳ Restante do mês: ${brl(p.remaining)}`:''}${p.paymentDetails?`\n📝 ${p.settlementInKind?'Bem recebido':'Detalhes do pagamento'}: ${p.paymentDetails}`:''}${p.note?`\n📝 ${p.note}`:''}`;
   }
 
   function listHtml(list){
@@ -41,7 +41,7 @@
       return `${head}<div class="ph-item" data-ph-id="${esc(p.id)}">
         <div class="row space"><strong>${brl(p.amount)}</strong><span class="muted">${phDate(p.date)}</span></div>
         <div class="muted">${phTypeLabel(p.type)} • ${esc(p.loan)}${p.reference?` • ref. ${esc(p.reference)}`:''} • ${phMethodLabel(p.method)}</div>
-        ${p.paymentDetails?`<div class="note">${p.settlementInKind?'Bem recebido':'Detalhes do pagamento'}: ${esc(p.paymentDetails)}</div>`:''}${p.note?`<div class="note">${esc(p.note)}</div>`:''}
+        ${p.discountAmount>0?`<div class="note">Desconto concedido: ${brl(p.discountAmount)}</div>`:''}${p.paymentDetails?`<div class="note">${p.settlementInKind?'Bem recebido':'Detalhes do pagamento'}: ${esc(p.paymentDetails)}</div>`:''}${p.note?`<div class="note">${esc(p.note)}</div>`:''}
         <div class="inline-actions"><button type="button" class="small-btn ph-send">📤 WhatsApp</button><button type="button" class="small-btn ph-copy">📋 Copiar</button><button type="button" class="small-btn ph-delete">🗑️ Excluir</button></div>
       </div>`;
     }).join('');
@@ -99,7 +99,7 @@
 
   function csvCell(v){const s=String(v??'');return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
   function exportCsv(cl,list){
-    const rows=[['Data','Tipo','Empréstimo','Referência','Forma','Valor','Descrição do pagamento','Observação'],...list.map(p=>[phDate(p.date),phTypeLabel(p.type),p.loan,p.reference,p.method,p.amount.toFixed(2).replace('.',','),p.paymentDetails,p.note])];
+    const rows=[['Data','Tipo','Empréstimo','Referência','Forma','Valor','Descrição do pagamento','Observação','Desconto'],...list.map(p=>[phDate(p.date),phTypeLabel(p.type),p.loan,p.reference,p.method,p.amount.toFixed(2).replace('.',','),p.paymentDetails,p.note,p.discountAmount.toFixed(2).replace('.',',')])];
     const blob=new Blob(['﻿'+rows.map(r=>r.map(csvCell).join(';')).join('\n')],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`extrato_${String(cl.name).replace(/\s+/g,'_')}_${todayISO()}.csv`;a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
@@ -109,8 +109,8 @@
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Extrato - ${esc(cl.name)}</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#0f172a}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #e2e8f0;padding:6px;text-align:left;font-size:12px}th{background:#f1f5f9}.r{text-align:right}</style></head><body>
       <h2>Extrato de pagamentos</h2><p><b>Cliente:</b> ${esc(cl.name)}<br><b>Gerado em:</b> ${new Date().toLocaleString('pt-BR')}</p>
       <p><b>Total pago:</b> ${brl(s.total)} • <b>Pagamentos:</b> ${s.count} • <b>Média:</b> ${brl(s.avg)}</p>
-      <table><thead><tr><th>Data</th><th>Tipo</th><th>Empréstimo</th><th>Referência</th><th>Forma</th><th class="r">Valor</th><th>Descrição do pagamento</th></tr></thead><tbody>
-      ${list.map(p=>`<tr><td>${phDate(p.date)}</td><td>${phTypeLabel(p.type)}</td><td>${esc(p.loan)}</td><td>${esc(p.reference)}</td><td>${esc(p.method||'—')}</td><td class="r">${brl(p.amount)}</td><td>${esc(p.paymentDetails)}</td></tr>`).join('')}
+      <table><thead><tr><th>Data</th><th>Tipo</th><th>Empréstimo</th><th>Referência</th><th>Forma</th><th class="r">Valor</th><th>Desconto</th><th>Descrição do pagamento</th></tr></thead><tbody>
+      ${list.map(p=>`<tr><td>${phDate(p.date)}</td><td>${phTypeLabel(p.type)}</td><td>${esc(p.loan)}</td><td>${esc(p.reference)}</td><td>${esc(p.method||'—')}</td><td class="r">${brl(p.amount)}</td><td>${brl(p.discountAmount)}</td><td>${esc(p.paymentDetails)}</td></tr>`).join('')}
       </tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
     w.document.close();
   }

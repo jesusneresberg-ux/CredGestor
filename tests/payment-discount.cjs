@@ -1,0 +1,28 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../firebase-hosting');
+const server=http.createServer((req,res)=>{const f=path.join(root,new URL(req.url,'http://localhost').pathname==='/'?'index.html':new URL(req.url,'http://localhost').pathname);fs.readFile(f,(e,d)=>{if(e)res.writeHead(404).end();else{res.setHeader('Content-Type',f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'text/css':'text/html');res.end(d)}})});
+const fixtures=['parcel','partial','payoff','invalid','cancel'].map(id=>({id,name:id,phone:'11999999999',contracts:[{id:id+'-loan',title:id,active:true,initialPrincipal:1000,interestRate:10,billingType:'interest',startDate:'2026-10-12',baseDueDay:12,payments:[],movements:[]}]}));
+(async()=>{
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true}),errors=[];
+ const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'America/Belem',serviceWorkers:'block'});
+ await context.route(/https:\/\//,r=>r.abort());
+ await context.route('**/personal-login.js*',r=>r.fulfill({contentType:'application/javascript',body:'(async()=>{document.getElementById("app").style.display="";document.body.dataset.v26Locked="false";document.getElementById("v261Boot").remove();for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS)await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=name;s.onload=resolve;s.onerror=reject;document.body.appendChild(s)});window.testBooted=true})()'}));
+ const page=await context.newPage();page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ await page.clock.install({time:new Date('2026-11-12T15:00:00Z')});
+ await page.addInitScript(clients=>{if(!localStorage.getItem('credigestor_single_owner_v25'))localStorage.setItem('credigestor_single_owner_v25',JSON.stringify({clients,settings:{appName:'CrediGestor',theme:'aurora',font:'Arial',notifyDays:[]},goals:{monthlyReceipt:0,maxDelinquency:10}}));window.open=()=>null},fixtures);
+ const data=id=>page.evaluate(id=>{const cl=state.clients.find(c=>c.id===id),k=cl.contracts[0];return {k,charge:chargeFor(cl,k,2026,10)}},id);
+ async function open(id,button){await page.evaluate(id=>window.openPaymentsHubV21(id,id+'-loan','2026-11'),id);await page.locator(button).click()}
+ try{
+  await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(()=>window.testBooted);
+  await open('parcel','#v21Parcel');await page.locator('#v21Discount').fill('10');assert.equal(await page.locator('#v21Amount').inputValue(),'90.00');assert.equal((await data('parcel')).k.payments.length,0);
+  await page.locator('#v21ConfirmParcel').click();await page.waitForSelector('#receiptTextV25');assert.match(await page.locator('#receiptTextV25').inputValue(),/Desconto concedido:[\s\S]*10,00/);let x=await data('parcel');assert.equal(x.k.payments[0].amount,90);assert.equal(x.charge.remaining,0);
+  await open('partial','#v21Partial');await page.locator('#v21PartialAmount').fill('30');await page.locator('#v21Discount').fill('5');assert.match(await page.locator('#v21PartialRemaining').innerText(),/65,00/);await page.locator('#v21ConfirmPartial').click();assert.match(await page.locator('#v21AdvanceReceipt').inputValue(),/65,00/);
+  await open('partial','#v21Parcel');assert.equal(await page.locator('#v21Amount').inputValue(),'65.00');await page.locator('#v21Discount').fill('5');assert.equal(await page.locator('#v21Amount').inputValue(),'60.00');await page.locator('#v21ConfirmParcel').click();await page.waitForSelector('#receiptTextV25');assert.equal((await data('partial')).charge.remaining,0);
+  await open('invalid','#v21Parcel');await page.locator('#v21Discount').fill('-1');await page.locator('#v21ConfirmParcel').click();assert.equal((await data('invalid')).k.payments.length,0);await page.locator('#v21Discount').fill('101');await page.locator('#v21ConfirmParcel').click();assert.equal((await data('invalid')).k.payments.length,0);
+  await open('cancel','#v21Parcel');await page.locator('#v21Discount').fill('10');await page.locator('#v21Back').click();assert.equal((await data('cancel')).charge.remaining,100);await page.locator('#v21Parcel').click();assert.equal(await page.locator('#v21Discount').inputValue(),'0');
+  await open('payoff','#v21Payoff');await page.locator('#ecDiscount').fill('150');assert.equal(await page.locator('#ecAmount').inputValue(),'950.00');await page.locator('#ecConfirm').click();await page.waitForSelector('#receiptTextV25');assert.match(await page.locator('#receiptTextV25').inputValue(),/Desconto concedido:[\s\S]*150,00/);x=await data('payoff');assert.equal(x.k.active,false);assert.equal(x.k.payments[0].amount,950);assert.equal(x.k.payments[0].discountAmount,150);
+  await page.reload();await page.waitForFunction(()=>window.testBooted);assert.equal((await data('parcel')).charge.remaining,0);await page.evaluate(()=>PaymentHistory.open('parcel'));assert.match(await page.locator('.ph-list').innerText(),/Desconto concedido:[\s\S]*10,00/);assert.match(await page.locator('.ph-stats').innerText(),/90,00/);assert.deepEqual(errors,[]);
+  console.log('PASS: desconto manual em parcela, adiantamento, quitação, histórico, caixa e persistência.');
+ }finally{await browser.close();server.close()}
+})().catch(e=>{console.error(e);process.exit(1)});

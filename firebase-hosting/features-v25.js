@@ -108,6 +108,7 @@
   function paymentReceiptV25(cl,k,p){
     return contractBlockV25(cl,k,'Comprovante de Pagamento')+`\n\n`+
       `✅ Valor pago: ${moneyV25(p?.amount||0)}\n`+
+      PaymentDiscount.receipt(p)+
       `📅 Data do pagamento: ${fmtDateV25(p?.paidAt)}\n`+
       PaymentMethods.receipt(p)+
       `🗓️ Referência: ${p?.reference||'—'}\n`+

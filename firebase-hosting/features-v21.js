@@ -98,6 +98,33 @@
       return true;
     }catch(error){Object.keys(k).forEach(key=>delete k[key]);Object.assign(k,previous);throw error;}
   }
+  // Desconto é baixa de dívida, separado do dinheiro efetivamente recebido.
+  const PaymentDiscount={
+    read(prefix='v21'){return Number(document.getElementById(prefix+'Discount')?.value||0)},
+    validate(value,limit){
+      const n=Number(value),c=Math.round(n*100);
+      if(!Number.isFinite(n)||n<0||Math.abs(n*100-c)>1e-7)throw Error('Informe um desconto válido, com até duas casas decimais.');
+      if(c>=Math.round(limit*100)&&c>0)throw Error('O desconto deve ser menor que o saldo a pagar.');
+      return c/100;
+    },
+    fields(prefix='v21'){return `<div class="field"><label for="${prefix}Discount">Desconto manual (R$)</label><input id="${prefix}Discount" type="number" min="0" step="0.01" inputmode="decimal" value="0"><small>Opcional. O desconto só será aplicado ao confirmar o pagamento.</small></div><div class="rule-note" id="${prefix}DiscountPreview" role="status"></div>`},
+    receipt(p){return Number(p?.discountAmount)>0?`🏷️ Desconto concedido: ${brl(p.discountAmount)}\n`:''},
+    bind(cl,k,partial=false){
+      const discount=document.getElementById('v21Discount'),amount=document.getElementById(partial?'v21PartialAmount':'v21Amount'),ref=document.getElementById(partial?'v21PartialRef':'v21Ref'),date=document.getElementById('v21Date');
+      let lastNet=null;
+      const refresh=(reset=false)=>{
+        const [y,m]=ref.value.split('-').map(Number),charge=y&&m?chargeFor(cl,k,y,m-1,date.value):null;
+        const d=Number(discount.value),net=Math.max(0,Math.round(((charge?.remaining||0)-d)*100)/100);
+        if(!partial&&(reset||lastNet!==null&&Math.round(Number(amount.value)*100)===Math.round(lastNet*100)))amount.value=net.toFixed(2);
+        amount.max=net.toFixed(2);lastNet=net;
+        document.getElementById('v21DiscountPreview').textContent=`Saldo antes do desconto: ${brl(charge?.remaining||0)} • Após desconto: ${brl(net)} • Restante após pagamento: ${brl(Math.max(0,net-(Number(amount.value)||0)))}`;
+        if(partial)document.getElementById('v21PartialRemaining').textContent=brl(Math.max(0,Math.round((net-(Number(amount.value)||0))*100)/100));
+      };
+      discount.addEventListener('input',()=>refresh(!partial));amount.addEventListener('input',()=>refresh());
+      ref.addEventListener('change',()=>refresh());date.addEventListener('change',()=>refresh());refresh();
+    }
+  };
+  window.PaymentDiscount=PaymentDiscount;
   function registerParcelV21(cl,k,ref,amount,paidAt,method,note,referenceDate,partial=false,attachment=null,paymentDetails={}){
     const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false){alert('Este empréstimo está encerrado.');return null}
@@ -107,16 +134,18 @@
     if(charge.status==='not_due'||charge.amount<=0){alert('Escolha um mês a partir do primeiro vencimento do empréstimo.');return null}
     if(!Number.isFinite(cents)||cents<=0){alert('Informe um valor maior que zero.');return null}
     if(cents>remainingCents||remainingCents===0){alert(`O saldo restante deste mês é ${brl(charge.remaining)}. Informe um valor até esse saldo.`);return null}
-    const remainingForMonth=(remainingCents-cents)/100;
+    const discountAmount=PaymentDiscount.validate(paymentDetails.discountAmount??0,charge.remaining),discountCents=Math.round(discountAmount*100);
+    if(cents+discountCents>remainingCents){alert('Valor recebido mais desconto ultrapassam o saldo deste mês.');return null}
+    const remainingForMonth=(remainingCents-cents-discountCents)/100;
     const previous=JSON.parse(JSON.stringify(k));
-    const payment={...paymentMeta,lateInterestAccrued:charge.lateInterest||0,lateInterestDays:charge.lateDays||0,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents)/100,remainingForMonth,createdAt:new Date().toISOString()};
+    const payment={...paymentMeta,lateInterestAccrued:charge.lateInterest||0,lateInterestDays:charge.lateDays||0,referenceDate:referenceDate||ymd(charge.originalDue||charge.due),id:uid('py'),reference:ref,amount:cents/100,discountAmount,settledAmount:(cents+discountCents)/100,paidAt,method,note,status:remainingForMonth>0?'partial':'paid',type:partial||remainingForMonth>0?'partial':'installment',monthTotal:charge.amount,paidForMonthAfter:(Math.round(charge.paid*100)+cents+discountCents)/100,remainingForMonth,createdAt:new Date().toISOString()};
     payment.dueDateAtPayment=ymd(charge.due);
     if(attachment)payment.receivedReceipt=attachment;
     k.payments=k.payments||[];k.payments.push(payment);k.updatedAt=new Date().toISOString();saveFinancialEventV21(cl,k,'payments',payment.id,previous);return payment;
   }
 
   function advanceReceiptV21(cl,k,p){
-    return `🧾 *Comprovante de Adiantamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${loanCodeV21(k)}\n🗓️ Mês de referência: ${p.reference}\n📅 Data: ${fmtDateV21(p.paidAt)}\n${PaymentMethods.receipt(p)}💰 Adiantamento recebido: ${brl(p.amount)}\n✅ Total pago no mês: ${brl(p.paidForMonthAfter)}\n\n📌 *RESTANTE PARA QUITAR O MÊS: ${brl(p.remainingForMonth)}*\n${p.remainingForMonth>0?'⏳ Mês ainda não quitado.':'✅ Mês quitado.'}`;
+    return `🧾 *Comprovante de Adiantamento*\n\n👤 Cliente: ${cl.name}\n📄 Empréstimo: ${loanCodeV21(k)}\n🗓️ Mês de referência: ${p.reference}\n📅 Data: ${fmtDateV21(p.paidAt)}\n${PaymentMethods.receipt(p)}${PaymentDiscount.receipt(p)}💰 Adiantamento recebido: ${brl(p.amount)}\n${(k.payments||[]).some(x=>x.reference===p.reference&&x.discountAmount>0)?'✅ Total baixado no mês (pagamentos + descontos)':'✅ Total pago no mês'}: ${brl(p.paidForMonthAfter)}\n\n📌 *RESTANTE PARA QUITAR O MÊS: ${brl(p.remainingForMonth)}*\n${p.remainingForMonth>0?'⏳ Mês ainda não quitado.':'✅ Mês quitado.'}`;
   }
 
   function showAdvanceReceiptV21(cl,k,p){
@@ -130,7 +159,7 @@
 
   function openPartialV21(clientId,contractId,ref){
     const cl=state.clients.find(x=>x.id===clientId),k=cl?.contracts?.find(x=>x.id===contractId);if(!k)return;
-    openModal(`<h2>Pagamento parcial</h2><div class="muted">${esc(cl.name)} • ${esc(loanCodeV21(k))}</div><div class="field"><label>Mês de referência</label><input id="v21PartialRef" type="month" value="${esc(ref)}"></div><div class="card"><div class="muted" id="v21PartialDue"></div><div class="v21-summary"><div><small>Valor do mês</small><strong id="v21PartialTotal"></strong></div><div><small>Já pago neste mês</small><strong id="v21PartialPaid"></strong></div><div class="v21-total"><small>Restante após este adiantamento</small><strong id="v21PartialRemaining"></strong></div></div></div><div class="field"><label>Valor deste adiantamento</label><input id="v21PartialAmount" type="number" step="0.01" min="0.01" inputmode="decimal"></div>${basePaymentFieldsV21({paidAt:ymd(new Date())},true)}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmPartial">Registrar e enviar adiantamento</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div><div class="rule-note">O adiantamento é somado aos pagamentos do mês escolhido. Disponível antes ou depois do vencimento.</div>`,()=>{
+    openModal(`<h2>Pagamento parcial</h2><div class="muted">${esc(cl.name)} • ${esc(loanCodeV21(k))}</div><div class="field"><label>Mês de referência</label><input id="v21PartialRef" type="month" value="${esc(ref)}"></div><div class="card"><div class="muted" id="v21PartialDue"></div><div class="v21-summary"><div><small>Valor do mês</small><strong id="v21PartialTotal"></strong></div><div><small>Já pago neste mês</small><strong id="v21PartialPaid"></strong></div><div class="v21-total"><small>Restante após este adiantamento</small><strong id="v21PartialRemaining"></strong></div></div></div><div class="field"><label>Valor deste adiantamento</label><input id="v21PartialAmount" type="number" step="0.01" min="0.01" inputmode="decimal"></div>${PaymentDiscount.fields()}${basePaymentFieldsV21({paidAt:ymd(new Date())},true)}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmPartial">Registrar e enviar adiantamento</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div><div class="rule-note">O adiantamento é somado aos pagamentos do mês escolhido. Disponível antes ou depois do vencimento.</div>`,()=>{
       PaymentMethods.bind('v21',()=>switchToAmortizationV21(clientId,contractId,month.value||ref,'v21PartialAmount'));
       const month=document.getElementById('v21PartialRef'),amount=document.getElementById('v21PartialAmount');
       function refresh(){
@@ -141,11 +170,11 @@
         document.getElementById('v21PartialRemaining').textContent=brl(Math.max(0,Math.round(((charge?.remaining||0)-(Number(amount.value)||0))*100)/100));
         amount.max=String(charge?.remaining||0);
       }
-      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;document.getElementById('v21Date').onchange=refresh;refresh();
+      month.oninput=refresh;month.onchange=refresh;amount.oninput=refresh;document.getElementById('v21Date').onchange=refresh;refresh();PaymentDiscount.bind(cl,k,true);
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,month.value||ref);
       document.getElementById('v21ConfirmPartial').onclick=async e=>{
         const button=e.currentTarget;if(button.disabled)return;button.disabled=true;try{
-        const p=registerParcelV21(cl,k,month.value,Number(amount.value),document.getElementById('v21Date').value||ymd(new Date()),document.getElementById('v21Method').value,document.getElementById('v21Note').value.trim(),undefined,true,null,PaymentMethods.read('v21'));
+        const p=registerParcelV21(cl,k,month.value,Number(amount.value),document.getElementById('v21Date').value||ymd(new Date()),document.getElementById('v21Method').value,document.getElementById('v21Note').value.trim(),undefined,true,null,{...PaymentMethods.read('v21'),discountAmount:PaymentDiscount.read()});
         if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();showAdvanceReceiptV21(cl,k,p);
         }catch(error){alert(error.message);}finally{button.disabled=false;}
       };
@@ -202,11 +231,12 @@
 
   function openParcelV21(clientId,contractId,ref,existing,charge){
     const cl=state.clients.find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;
-    openModal(`<h2>Pagar Parcela</h2><div class="card"><div class="muted">Referência ${esc(ref)} • vencimento ${charge.due.toLocaleDateString('pt-BR')}</div><strong style="font-size:26px">${brl(charge.remaining)}</strong><div class="muted">Restante para quitar o mês • já pago: ${brl(charge.paid)}</div></div><div class="field"><label>Mês de referência</label><input id="v21Ref" value="${esc(ref)}" pattern="\\d{4}-\\d{2}"></div><div class="field" id="v27ReferenceField" hidden><label>Data de referência da cobrança em atraso (vencimento original)</label><input id="v27ReferenceDate" type="date" required value="${esc(existing?.referenceDate||[(charge.originalDue||charge.due).getFullYear(),String((charge.originalDue||charge.due).getMonth()+1).padStart(2,'0'),String((charge.originalDue||charge.due).getDate()).padStart(2,'0')].join('-'))}" ${existing?.referenceDate?'readonly':''}><small>Preservada no pagamento mesmo após atraso ou renegociação.</small></div><div class="field"><label>Valor pago</label><input id="v21Amount" type="number" step="0.01" min="0.01" value="${Number(charge.remaining).toFixed(2)}"></div>${basePaymentFieldsV21({},true)}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmParcel">Confirmar e enviar comprovante</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div>`,()=>{
+    openModal(`<h2>Pagar Parcela</h2><div class="card"><div class="muted">Referência ${esc(ref)} • vencimento ${charge.due.toLocaleDateString('pt-BR')}</div><strong style="font-size:26px">${brl(charge.remaining)}</strong><div class="muted">Restante para quitar o mês • já pago: ${brl(charge.paid)}</div></div><div class="field"><label>Mês de referência</label><input id="v21Ref" value="${esc(ref)}" pattern="\\d{4}-\\d{2}"></div><div class="field" id="v27ReferenceField" hidden><label>Data de referência da cobrança em atraso (vencimento original)</label><input id="v27ReferenceDate" type="date" required value="${esc(existing?.referenceDate||[(charge.originalDue||charge.due).getFullYear(),String((charge.originalDue||charge.due).getMonth()+1).padStart(2,'0'),String((charge.originalDue||charge.due).getDate()).padStart(2,'0')].join('-'))}" ${existing?.referenceDate?'readonly':''}><small>Preservada no pagamento mesmo após atraso ou renegociação.</small></div><div class="field"><label>Valor pago</label><input id="v21Amount" type="number" step="0.01" min="0.01" value="${Number(charge.remaining).toFixed(2)}"></div>${PaymentDiscount.fields()}${basePaymentFieldsV21({},true)}<div class="actions"><button type="button" class="primary-btn" id="v21ConfirmParcel">Confirmar e enviar comprovante</button><button type="button" class="soft-btn" id="v21Back">Voltar</button></div>`,()=>{
       PaymentMethods.bind('v21',()=>switchToAmortizationV21(clientId,contractId,ref,'v21Amount'));
       document.getElementById('v21Back').onclick=()=>openPaymentsHubV21(clientId,contractId,ref);
+      PaymentDiscount.bind(cl,k);
       const referenceField=document.getElementById('v27ReferenceField'),paidDateField=document.getElementById('v21Date'),referenceDateField=document.getElementById('v27ReferenceDate');function showLateReference(){const refValue=document.getElementById('v21Ref').value;const parts=refValue.split('-').map(Number);const actual=parts[0]&&parts[1]?chargeFor(cl,k,parts[0],parts[1]-1):null;referenceField.hidden=!(actual&&paidDateField.value>ymd(actual.due));}paidDateField.addEventListener('change',showLateReference);referenceDateField.addEventListener('change',showLateReference);showLateReference();
-      document.getElementById('v21ConfirmParcel').onclick=async e=>{const button=e.currentTarget;if(button.disabled)return;button.disabled=true;button.textContent='Salvando pagamento…';try{const amount=Number(document.getElementById('v21Amount').value)||0;if(amount<=0){alert('Informe um valor maior que zero.');return}const input={reference:document.getElementById('v21Ref').value.trim()||ref,amount,paidAt:document.getElementById('v21Date').value||todayISO(),method:document.getElementById('v21Method').value||'PIX',note:document.getElementById('v21Note').value.trim()};input.referenceDate=document.getElementById('v27ReferenceDate').value;if(!input.referenceDate){alert('Informe a data de referência da cobrança.');return}const p=registerParcelV21(cl,k,input.reference,input.amount,input.paidAt,input.method,input.note,input.referenceDate,false,null,PaymentMethods.read('v21'));if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();if(p.remainingForMonth>0)showAdvanceReceiptV21(cl,k,p);else sendWhatsAppV21(cl,paymentReceiptV21(cl,k,p),'Pagamento registrado.');}catch(e){alert(e.message);}finally{button.disabled=false;button.textContent='Confirmar e enviar comprovante';}};
+      document.getElementById('v21ConfirmParcel').onclick=async e=>{const button=e.currentTarget;if(button.disabled)return;button.disabled=true;button.textContent='Salvando pagamento…';try{const amount=Number(document.getElementById('v21Amount').value)||0;if(amount<=0){alert('Informe um valor maior que zero.');return}const input={reference:document.getElementById('v21Ref').value.trim()||ref,amount,paidAt:document.getElementById('v21Date').value||todayISO(),method:document.getElementById('v21Method').value||'PIX',note:document.getElementById('v21Note').value.trim()};input.referenceDate=document.getElementById('v27ReferenceDate').value;if(!input.referenceDate){alert('Informe a data de referência da cobrança.');return}const p=registerParcelV21(cl,k,input.reference,input.amount,input.paidAt,input.method,input.note,input.referenceDate,false,null,{...PaymentMethods.read('v21'),discountAmount:PaymentDiscount.read()});if(!p)return;if(window.CREDIGESTOR_MULTITENANT)await window.CrediGestorCloud.flush();closeModal();render();if(p.remainingForMonth>0)showAdvanceReceiptV21(cl,k,p);else sendWhatsAppV21(cl,paymentReceiptV21(cl,k,p),'Pagamento registrado.');}catch(e){alert(e.message);}finally{button.disabled=false;button.textContent='Confirmar e enviar comprovante';}};
     });
   }
   function switchToAmortizationV21(clientId,contractId,ref,amountId,prefix='v21'){
