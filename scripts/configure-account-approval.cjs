@@ -38,4 +38,4 @@ const fs=require('node:fs');
  const verified=(await client.request({url:`${api}/${readback.rulesetName}`})).data;
  if(!verified.source.files.some(f=>f.content.includes('// CrediGestor account approval v1')))throw Error('Regras não confirmadas.');
  console.log('Aprovações protegidas por regras do servidor; regras anteriores preservadas.');
-})().catch(e=>{console.error('Falha ao configurar aprovações:',e.response?.status||e.message);process.exitCode=1;});
+})().catch(e=>{console.error('Falha ao configurar aprovações:',e.response?.status||'',e.response?.data?.error?.message||e.message);try{console.error('Conta de publicação:',JSON.parse(process.env.FIREBASE_DEPLOY_ACCOUNT||'{}').client_email||'não identificada');}catch(_){}process.exitCode=1;});

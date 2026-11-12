@@ -53,6 +53,8 @@ html[data-color-mode="dark"] .v6-color-field{background:#243247}
 .v26-auth-card{max-height:calc(100dvh - 40px);overflow-y:auto}
 .v26-auth-card label{display:grid;gap:6px;margin:14px 0;font-weight:600}
 .v26-auth-card input{width:100%;min-width:0;padding:12px;border:1px solid #94a3b8;border-radius:10px;font-size:16px}
+.v26-auth-card label:has(input[type="checkbox"]){display:flex;align-items:center;gap:9px;font-size:14px}
+.v26-auth-card input[type="checkbox"]{width:18px;height:18px;flex:none;padding:0}
 .v26-auth-card button{min-height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:10px;background:#eff6ff;color:#1e3a8a}
 .v26-auth-card button[type="submit"]{background:#2563eb;color:white;border-color:#2563eb}
 .v26-auth-card button:disabled{opacity:.6;cursor:wait}
