@@ -1,7 +1,8 @@
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,collection,getDoc,getDocs,setDoc,updateDoc,serverTimestamp}=require('firebase/firestore');
 (async()=>{
- const env=await initializeTestEnvironment({projectId:'demo-credigestor',firestore:{host:'127.0.0.1',port:8188}});
+ const rules=require('node:fs').readFileSync(process.env.CREDIGESTOR_RULES_PATH,'utf8');
+ const env=await initializeTestEnvironment({projectId:'demo-credigestor',firestore:{host:'127.0.0.1',port:8188,rules}});
  try{
   const user=env.authenticatedContext('new-user',{email:'new@example.com',email_verified:false}).firestore();
   const other=env.authenticatedContext('other-user',{email:'other@example.com',email_verified:true}).firestore();

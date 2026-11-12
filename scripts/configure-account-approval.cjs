@@ -22,8 +22,8 @@ const fs=require('node:fs'),os=require('node:os'),pathModule=require('node:path'
    const temp=fs.mkdtempSync(pathModule.join(os.tmpdir(),'credigestor-approval-'));
    const rulesPath=pathModule.join(temp,'firestore.rules'),configPath=pathModule.join(temp,'firebase.json');
    fs.writeFileSync(rulesPath,content);
-   fs.writeFileSync(configPath,JSON.stringify({firestore:{rules:rulesPath},emulators:{firestore:{host:'127.0.0.1',port:8188},ui:{enabled:false},singleProjectMode:true}}));
-   const testEnv={...process.env};delete testEnv.FIREBASE_DEPLOY_ACCOUNT;
+   fs.writeFileSync(configPath,JSON.stringify({firestore:{rules:'firestore.rules'},emulators:{firestore:{host:'127.0.0.1',port:8188},ui:{enabled:false},singleProjectMode:true}}));
+   const testEnv={...process.env,CREDIGESTOR_RULES_PATH:rulesPath};delete testEnv.FIREBASE_DEPLOY_ACCOUNT;
    execFileSync('npx',['--no-install','firebase','emulators:exec','--only','firestore','--project','demo-credigestor','--config',configPath,'node tests/approval-rules.cjs'],{stdio:'inherit',env:testEnv});
    const created=(await client.request({url:`${api}/projects/${project}/rulesets`,method:'POST',data:{source:{files}}})).data;
    await client.request({url:`${api}/${release}`,method:'PATCH',data:{release:{name:release,rulesetName:created.name},updateMask:'rulesetName'}});
