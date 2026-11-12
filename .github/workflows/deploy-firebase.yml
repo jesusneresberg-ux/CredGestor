@@ -32,6 +32,10 @@ jobs:
         run: node scripts/enable-password-auth.cjs
         env:
           FIREBASE_DEPLOY_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CREDIGESTOR_TESTES }}
+      - name: Proteger aprovação de contas pelo administrador
+        run: node scripts/configure-account-approval.cjs
+        env:
+          FIREBASE_DEPLOY_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CREDIGESTOR_TESTES }}
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
