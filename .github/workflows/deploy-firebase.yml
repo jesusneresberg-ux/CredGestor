@@ -4,7 +4,7 @@ name: Publicar no Firebase
 on:
   push:
     branches: [main]
-    paths: ['firebase-hosting/**', 'tests/**', 'scripts/enable-password-auth.cjs', '.github/workflows/deploy-firebase.yml']
+    paths: ['firebase-hosting/**', 'tests/**', 'scripts/enable-password-auth.cjs', 'scripts/configure-account-approval.cjs', 'scripts/account-approval.rules.fragment', '.github/workflows/deploy-firebase.yml']
   workflow_dispatch:
 permissions:
   contents: read
