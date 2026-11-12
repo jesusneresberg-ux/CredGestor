@@ -6,7 +6,7 @@
   const DEFAULTS={
     enabled:true,
     interestMode:'calendar_days',
-    assistantDefault:'due_today',
+    assistantDefault:'auto',
     includePix:true,
     includeBreakdown:false,
     templates:{
@@ -60,6 +60,12 @@
       state.settings.pixType='CNPJ';state.settings.pixKey='48379018000172';state.settings.pixName='RJOTA COMÉRCIO';
       s.rjotaReminderDefault202611=true;
     }
+    if(window.CREDIGESTOR_WALLET_SESSION?.uid==='r7XvaVZzBhglpaMAuMlBXuipBBt1'&&!s.contractDueReminder202611){
+      s.assistantDefault='auto';
+      const reminder='Olá, {nome}. Passando para lembrar que sua cobrança de {valor_atualizado}, referente a {referencia}, {situacao_vencimento}.{pix_bloco}';
+      ['due_today','upcoming','overdue'].forEach(type=>{s.templates[type]=reminder;});
+      s.contractDueReminder202611=true;
+    }
     return s;
   }
   ensureSettings22();
@@ -97,7 +103,7 @@
     if(x?.due){const d=new Date(x.due);if(!Number.isNaN(d.getTime()))return d}
     const [y,m]=String(ref||'').split('-').map(Number);
     if(y&&m){
-      const preferred=Number(k.dueDay||k.paymentDay||new Date(k.startDate||k.createdAt||Date.now()).getDate())||1;
+      const preferred=Number(k.baseDueDay||k.dueDay||k.paymentDay||new Date(k.startDate||k.createdAt||Date.now()).getDate())||1;
       const last=new Date(y,m,0).getDate();return new Date(y,m-1,Math.min(preferred,last));
     }
     return new Date();
@@ -133,7 +139,7 @@
     const base=principal22(k,x);
     const rate=monthlyRate22(k,x);
     const scheduled=Number(x?.amount)||Number(k.installmentAmount)||Number(k.summaryTotal)||base*(1+rate);
-    const overdue=asOf>due;
+    const overdue=dateKey22(asOf)>dateKey22(due);
     const calc=overdue?proportionalInterest22(base,rate,due,asOf):{interest:0,days:0,segments:[]};
     const updated=overdue?Math.max(scheduled,base+calc.interest):scheduled;
     return {due,base,rate,scheduled,updated,overdue,...calc};
@@ -156,6 +162,7 @@
       nome:cl.name||'cliente',
       referencia:ref,
       vencimento:dateBR22(c.due),
+      situacao_vencimento:c.overdue?`está vencida desde ${dateBR22(c.due)}`:dateKey22(asOf)===dateKey22(c.due)?`vence hoje (${dateBR22(c.due)})`:`vence em ${dateBR22(c.due)}`,
       data_atual:dateBR22(asOf),
       valor_atualizado:brl22(c.updated),
       valor_original:brl22(c.scheduled),
@@ -164,7 +171,7 @@
       juros_bloco:s.includeBreakdown?interestBlock22(c):'',
       pix_bloco:s.includePix?pixBlock22():''
     };
-    return String(s.templates[type]||s.templates.upcoming||DEFAULTS.templates.upcoming).replace(/\{(nome|referencia|vencimento|data_atual|valor_atualizado|valor_original|juros|dias|juros_bloco|pix_bloco)\}/g,(_,k)=>vals[k]??'');
+    return String(s.templates[type]||s.templates.upcoming||DEFAULTS.templates.upcoming).replace(/\{(nome|referencia|vencimento|situacao_vencimento|data_atual|valor_atualizado|valor_original|juros|dias|juros_bloco|pix_bloco)\}/g,(_,k)=>vals[k]??'');
   }
 
   function openAssistant22(clientId,contractId,ref){
@@ -201,7 +208,7 @@
       document.getElementById('v22Updated').textContent=brl22(cc.updated);document.getElementById('v22Interest').textContent=brl22(cc.interest);document.getElementById('v22Days').textContent=cc.days;
       msgEl.value=m;prev.textContent=m;
     }
-    typeEl.onchange=refresh;dateEl.onchange=refresh;msgEl.oninput=()=>{prev.textContent=msgEl.value};refresh();
+    typeEl.onchange=refresh;dateEl.onchange=()=>{if(s.assistantDefault==='auto'&&['due_today','upcoming','overdue'].includes(typeEl.value)){const d=new Date(dateEl.value+'T12:00:00'),cc=calculation22(hit,d);typeEl.value=cc.overdue?'overdue':dateKey22(cc.due)===dateKey22(d)?'due_today':'upcoming';}refresh();};msgEl.oninput=()=>{prev.textContent=msgEl.value};refresh();
     document.getElementById('v22Copy').onclick=async()=>{try{await navigator.clipboard.writeText(msgEl.value);alert('Mensagem copiada.')}catch(_){msgEl.select();document.execCommand('copy');alert('Mensagem copiada.')}};
     document.getElementById('v22Send').onclick=()=>{if(phone.length<12){alert('Cadastre o telefone do cliente com DDD antes de enviar.');return}window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msgEl.value)}`,'_blank','noopener')};
   }
