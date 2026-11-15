@@ -22,6 +22,7 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.62.1 google-auth-library@9.15.1 firebase-tools@13.35.1 @firebase/rules-unit-testing@3.0.4 firebase@10.14.1
       - run: npx playwright install --with-deps chromium --only-shell
       - run: node tests/personal-login.cjs
+      - run: node tests/app-icon.cjs
       - run: node tests/assistant-template.cjs
       - run: node tests/capitalization.cjs
       - run: node tests/firebase-partial-payments.cjs
@@ -45,3 +46,4 @@ jobs:
           projectId: credigestor-testes
           entryPoint: firebase-hosting
           channelId: live
+

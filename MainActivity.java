@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(CrediBiometricPlugin.class);
+        registerPlugin(CrediAppIconPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Registrar plugins adicionais aqui, se necessário
@@ -19,3 +20,4 @@ public class MainActivity extends BridgeActivity {
     }
 
 }
+

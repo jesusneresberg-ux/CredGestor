@@ -1,0 +1,10 @@
+[
+  {"id":"blue","name":"Azul","color":"#2563eb"},
+  {"id":"green","name":"Verde","color":"#059669"},
+  {"id":"purple","name":"Roxo","color":"#7c3aed"},
+  {"id":"red","name":"Vermelho","color":"#dc2626"},
+  {"id":"orange","name":"Laranja","color":"#ea580c"},
+  {"id":"gold","name":"Dourado","color":"#a16207"},
+  {"id":"cyan","name":"Ciano","color":"#0891b2"},
+  {"id":"slate","name":"Grafite","color":"#334155"}
+]
