@@ -23,6 +23,7 @@ jobs:
       - run: npx playwright install --with-deps chromium --only-shell
       - run: node tests/personal-login.cjs
       - run: node tests/app-icon.cjs
+      - run: node tests/readability.cjs
       - run: node tests/assistant-template.cjs
       - run: node tests/capitalization.cjs
       - run: node tests/firebase-partial-payments.cjs
@@ -46,4 +47,5 @@ jobs:
           projectId: credigestor-testes
           entryPoint: firebase-hosting
           channelId: live
+
 

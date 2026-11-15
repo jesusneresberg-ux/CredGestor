@@ -2,7 +2,12 @@
   'use strict';
   const colors=[['blue','Azul','#2563eb'],['green','Verde','#059669'],['purple','Roxo','#7c3aed'],['red','Vermelho','#dc2626'],['orange','Laranja','#ea580c'],['gold','Dourado','#a16207'],['cyan','Ciano','#0891b2'],['slate','Grafite','#334155']];
   const cap=window.Capacitor;
-  const plugin=cap?.isNativePlatform?.()&&cap?.isPluginAvailable?.('CrediAppIcon')?cap.registerPlugin('CrediAppIcon'):null;
+  // Capacitor injects native plugin proxies directly in APK pages without a JS bundle.
+  let plugin=null;
+  if(cap?.isNativePlatform?.()){
+    plugin=cap.Plugins?.CrediAppIcon||null;
+    if(!plugin&&typeof cap.registerPlugin==='function'&&cap.isPluginAvailable?.('CrediAppIcon'))plugin=cap.registerPlugin('CrediAppIcon');
+  }
   const previous=renderSettings;
   renderSettings=function(){
     previous();
@@ -43,3 +48,4 @@
     };
   };
 })();
+

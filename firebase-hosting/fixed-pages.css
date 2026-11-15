@@ -11,3 +11,21 @@ body .bottom-nav{left:50%!important;right:auto!important;top:auto!important;bott
 body .fab{position:static!important;display:block;margin:16px 0 0 auto;box-shadow:none!important}
 body .v26-auth-overlay{background:var(--surface-solid,#fff)!important;backdrop-filter:none!important}
 body .v26-auth-card{box-shadow:none!important;border-radius:0!important}
+
+
+/* One fixed frame. Only the content scrolls; header and navigation occupy their own rows. */
+html,html body{height:100%;min-height:100%;margin:0;overflow:hidden!important}
+html body #app.app-shell{position:relative!important;display:flex;flex-direction:column;width:100%!important;max-width:none!important;height:100dvh!important;min-height:0!important;margin:0!important;padding:0!important;border-radius:0!important;box-shadow:none!important;background:var(--surface-solid,#fff)}
+html body #app>.topbar{position:relative!important;top:auto!important;flex:0 0 auto;z-index:20;transform:none!important;background:var(--surface-solid,#fff)!important;backdrop-filter:none!important;box-shadow:none!important;border-bottom:1px solid var(--line);padding-top:max(12px,env(safe-area-inset-top));border-radius:0!important}
+html body #app>#view.view{position:relative!important;flex:1 1 auto;min-height:0;width:100%;max-width:none!important;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior-y:contain;margin:0!important;padding-bottom:20px;scroll-behavior:auto;transform:none!important}
+html body #app>nav.bottom-nav{position:relative!important;inset:auto!important;left:auto!important;bottom:auto!important;transform:none!important;flex:0 0 auto;width:100%!important;max-width:none!important;grid-template-columns:repeat(auto-fit,minmax(42px,1fr))!important;background:var(--surface-solid,#fff)!important;backdrop-filter:none!important;border-radius:0!important;box-shadow:none!important}
+html body #app :is(.card,.list-item,.quick-card2,.v10-setting-card){box-shadow:none!important;backdrop-filter:none!important;transform:none!important;background:var(--surface-solid,#fff)}
+html body #app .hero{box-shadow:none!important}
+html body .fab{position:static!important;inset:auto!important;transform:none!important;box-shadow:none!important}
+html body .v26-auth-overlay{padding:0!important;place-items:stretch;overflow:auto;transform:none!important}
+html body .v26-auth-card{width:100%;max-width:none;min-height:100dvh;max-height:none;border-radius:0!important;box-shadow:none!important}
+html body dialog[open]{overscroll-behavior:contain}
+html body .modal-close{position:sticky!important;top:0;z-index:3;display:block;margin-left:auto;box-shadow:none!important}
+
+html body .modal-card{padding-top:12px!important}
+html body #modalContent{padding-top:12px!important}

@@ -1,0 +1,15 @@
+html{font-size:calc(16px * var(--app-font-scale,1))}
+.readability-preview{font-size:16px;line-height:1.5;padding:12px;background:var(--surface-solid);border:1px solid var(--line);border-radius:8px}
+html body #app .topbar-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:45%}
+html body #app .topbar-actions .icon-btn{box-shadow:none;min-width:44px}
+html body #app .brand-identity{flex:1;min-width:0}
+html body #app .brand-copy{min-width:0}
+html body #app .bottom-nav .nav-btn{min-width:0;min-height:48px;white-space:normal}
+html body #app .bottom-nav .nav-btn small{white-space:normal;overflow-wrap:anywhere;line-height:1.2}
+html body #app :is(.grid,.two,.loan-numbers,.summary-strip2){grid-template-columns:repeat(2,minmax(0,1fr))}
+html body #app :is(input,select,textarea){max-width:100%;min-width:0}
+html body #app :is(.metric strong,.hero .big,.money){overflow-wrap:anywhere}
+@media(max-width:600px){
+  html[data-large-font="true"] body #app :is(.grid,.two,.loan-numbers,.summary-strip2,.v10-settings-grid,.v10-chart-grid){grid-template-columns:minmax(0,1fr)}
+  html[data-large-font="true"] body #app .topbar .eyebrow{display:none}
+}

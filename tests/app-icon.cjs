@@ -11,7 +11,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
    window.applySettings=()=>{};window.saveState=()=>localStorage.setItem('test-wallet',JSON.stringify(state));
    window.renderSettings=()=>document.getElementById('view').innerHTML='<div id="logoAppearance"><input type="color" id="logoColorInput"><output id="logoColorCode"></output><small id="logoColorStatus"></small></div>';
    window.icon='blue';window.fail=false;window.calls=[];
-   if(native)window.Capacitor={isNativePlatform:()=>true,isPluginAvailable:()=>true,registerPlugin:()=>({getIcon:async()=>({color:icon}),setIcon:async({color})=>{calls.push(color);if(fail)throw Error('device error');icon=color;return {color}}})};
+   if(native)window.Capacitor={isNativePlatform:()=>true,isPluginAvailable:()=>true,Plugins:{CrediAppIcon:{getIcon:async()=>({color:icon}),setIcon:async({color})=>{calls.push(color);if(fail)throw Error('device error');icon=color;return {color}}}}};
   },native);
   await page.addScriptTag({content:fs.readFileSync('firebase-hosting/app-icon.js','utf8')});
   await page.evaluate(()=>renderSettings());return page;
@@ -27,3 +27,4 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  assert.equal(await page.evaluate(()=>state.settings.logoColor),'#059669');assert.equal(await page.locator('#applyAppIcon').isDisabled(),false);
  console.log('OK: Android icon choices, persistence, matching logo, failed native changes and unsupported APK/browser');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
+
