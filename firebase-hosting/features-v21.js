@@ -69,7 +69,7 @@
     const end=Math.max(start,today.getFullYear()*12+today.getMonth())+(k.payments||[]).length+1;
     for(let month=start;month<=end;month++){
       const y=Math.floor(month/12),m=month%12,ref=`${y}-${String(m+1).padStart(2,'0')}`;
-      if(paymentTotalForMonth(k,ref)<monthlyDue(k))return month===start&&first?new Date(first):dueDateFor(y,m,k.baseDueDay);
+      if(client&&chargeFor(client,k,y,m).remaining>0)return month===start&&first?new Date(first):dueDateFor(y,m,k.baseDueDay);
     }
     return first||dueDateFor(today.getFullYear(),today.getMonth(),k.baseDueDay);
   }

@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const root=__dirname+'/../firebase-hosting/';
+const cl={id:'c',name:'Teste',contracts:[]};
+const ctx={window:{},state:{clients:[cl]},Date,Math,console,document:{getElementById:()=>null},saveState(){},openModal(){}};
+vm.createContext(ctx);const app=fs.readFileSync(root+'app.js','utf8');
+vm.runInContext(app.slice(app.indexOf('function uid('),app.indexOf('const appearanceCache')),ctx);
+for(const f of ['renegotiate.js','early-close.js','features-v29.js','capitalization.js'])vm.runInContext(fs.readFileSync(root+f,'utf8'),ctx);
+const k={id:'k',initialPrincipal:1000,interestRate:10,billingType:'interest',baseDueDay:7,startDate:'2026-10-01',active:true,movements:[],payments:[]};cl.contracts.push(k);
+const quote=(m,at)=>ctx.chargeFor(cl,k,2026,m-1,at);
+assert.equal(quote(11,'2026-11-08').remaining,100);
+assert.equal(quote(11,'2026-11-30').remaining,100,'dias de atraso não alteram juros');
+assert.equal(quote(12,'2026-12-31').remaining,0,'não renova juros no mês seguinte');
+assert.equal(quote(12,'2026-12-31').status,'not_due');
+k.movements.push({type:'amortization',amount:400,date:'2026-11-09'});
+assert.equal(quote(11,'2026-11-10').amount,100,'amortização não recalcula juros iniciais');
+ctx.window.CrediGestorOverdueV29.addManual(cl,k,'2026-12',25,'2026-11-10','Combinado');
+assert.equal(quote(12,'2026-11-09').amount,0,'lançamento futuro não entra antes da data');
+assert.equal(quote(12,'2026-12-30').remaining,25,'novo mês só contém juros manuais');
+k.payments.push({reference:'2026-11',amount:100,paidAt:'2026-11-11'});
+assert.equal(quote(11,'2026-11-12').remaining,0);
+const before=JSON.stringify(k);
+for(const d of ['2026-11-01','2026-11-06']){const s=ctx.window.earlyCloseStatement('c','k',d);assert.equal(s.proportional,10000,'antes do vencimento usa juros integrais');assert.equal(s.total,70000);}
+const s=ctx.window.earlyCloseStatement('c','k','2026-12-30');assert.equal(s.interest,2500);assert.equal(s.total,62500);assert.equal(JSON.stringify(k),before,'consultas não alteram registros');
+console.log('PASS: juros iniciais integrais, sem renovação ou proporcional, amortização, juros manuais, pagamentos e quitação.');

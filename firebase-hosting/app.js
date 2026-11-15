@@ -93,7 +93,7 @@ function contractBalance(c){
 }
 function monthlyDue(c){
   if(isPaidContract(c)||c.billingType==='amortization')return 0;
-  const bal=contractBalance(c);
+  const bal=Number(c.initialPrincipal)||0;
   if(c.billingType==='fixed') return Number(c.fixedAmount)||0;
   return bal*(Number(c.interestRate)||0)/100;
 }
@@ -132,11 +132,14 @@ function chargeFor(cl,c,year,monthIndex){
     if(targetMonth<firstMonth){beforeFirst=true;due=new Date(firstDue);}
     else if(targetMonth===firstMonth){due=new Date(firstDue);}
   }
-  const amount=beforeFirst&&!payment?0:monthlyDue(c);
+  const initialMonth=firstDue&&year===firstDue.getFullYear()&&monthIndex===firstDue.getMonth();
+  const manual=(c.manualLateInterest||[]).some(e=>e.reference===ref);
+  const amount=initialMonth?monthlyDue(c):0;
+  const noCharge=!initialMonth&&!manual&&!payment;
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
   const paid=paymentTotalForMonth(c,ref),remaining=Math.max(0,Math.round((amount-paid)*100))/100;
-  const status=beforeFirst||c.billingType==='amortization'?'not_due':remaining===0?'paid':d0<now?'late':'open';
+  const status=beforeFirst||noCharge||c.billingType==='amortization'?'not_due':remaining===0?'paid':d0<now?'late':'open';
   return {cl,c,ref,due,payment,amount,status,firstDue,paid,remaining};
 }
 function allChargesAround(){
