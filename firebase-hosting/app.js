@@ -134,8 +134,9 @@ function chargeFor(cl,c,year,monthIndex){
   }
   const initialMonth=firstDue&&year===firstDue.getFullYear()&&monthIndex===firstDue.getMonth();
   const manual=(c.manualLateInterest||[]).some(e=>e.reference===ref);
-  const amount=initialMonth?monthlyDue(c):0;
-  const noCharge=!initialMonth&&!manual&&!payment;
+  const scheduled=initialMonth||c.billingType==='fixed';
+  const amount=scheduled?monthlyDue(c):0;
+  const noCharge=!scheduled&&!manual&&!payment;
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
   const paid=paymentTotalForMonth(c,ref),remaining=Math.max(0,Math.round((amount-paid)*100))/100;
