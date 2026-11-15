@@ -43,6 +43,7 @@ function defaultState(){
     settings:{
       appName:'CrediGestor',
       theme:'aurora',
+      logoColor:'',
       font:'"Segoe UI", Arial, sans-serif',
       customWallpaper:'',
       googleCalendar:false,
@@ -166,6 +167,9 @@ function applySettings(){
   const root=document.documentElement;
   const personalTheme=appearanceTheme();
   const th=THEMES[personalTheme||state.settings.theme]||THEMES.aurora;
+  const logoColor=state.settings.logoColor;
+  if(/^#[0-9a-f]{6}$/i.test(logoColor||''))root.style.setProperty('--logo-color',logoColor);
+  else root.style.removeProperty('--logo-color');
   root.dataset.colorMode=th.dark?'dark':'light';
   root.style.setProperty('--accent',th.accent);
   root.style.setProperty('--accent-2',th.accent2);
@@ -355,6 +359,15 @@ function renderSettings(){
         <select id="themeSelect">${Object.entries(THEMES).map(([k,v])=>`<option value="${k}" ${k===currentTheme?'selected':''}>${v.name}</option>`).join('')}</select>
         <small class="muted">Tema salvo neste aparelho para sua conta.</small>
       </div>
+      <div class="field" id="logoAppearance">
+        <label for="logoColorInput">Cor da logomarca</label>
+        <div class="logo-color-controls">
+          <input id="logoColorInput" type="color" value="${/^#[0-9a-f]{6}$/i.test(state.settings.logoColor||'')?state.settings.logoColor:(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||th.accent)}" aria-describedby="logoColorStatus">
+          <output id="logoColorCode" class="logo-color-code" for="logoColorInput"></output>
+          <button id="resetLogoColor" type="button" class="ghost-btn">Usar cor do tema</button>
+        </div>
+        <small id="logoColorStatus" class="muted" role="status"></small>
+      </div>
       <div class="field"><label>Fonte</label>
         <select id="fontSelect">
           ${['"Segoe UI", Arial, sans-serif','Arial, sans-serif','Georgia, serif','Tahoma, sans-serif','Verdana, sans-serif','"Trebuchet MS", sans-serif','system-ui, sans-serif','Roboto, Arial, sans-serif','"Helvetica Neue", Arial, sans-serif','Cambria, Georgia, serif','Palatino, Georgia, serif','"Times New Roman", serif','"Courier New", monospace','Consolas, monospace'].map(f=>`<option value="${esc(f)}" ${f===state.settings.font?'selected':''}>${f.split(',')[0].replaceAll('"','')}</option>`).join('')}
@@ -377,7 +390,17 @@ function renderSettings(){
     </div>
   `;
   document.getElementById('appNameInput').onchange=e=>{state.settings.appName=e.target.value.trim()||'CrediGestor';saveState()};
-  document.getElementById('themeSelect').onchange=e=>chooseTheme(e.target.value);
+  const logoInput=document.getElementById('logoColorInput');
+  const logoStatus=document.getElementById('logoColorStatus');
+  function updateLogoControls(){
+    document.getElementById('logoColorCode').textContent=logoInput.value.toUpperCase();
+    logoStatus.textContent=state.settings.logoColor?'Cor personalizada.':'A logomarca acompanha a cor do tema.';
+  }
+  logoInput.oninput=()=>{document.documentElement.style.setProperty('--logo-color',logoInput.value);document.getElementById('logoColorCode').textContent=logoInput.value.toUpperCase();logoStatus.textContent='Prévia da cor personalizada.';};
+  logoInput.onchange=()=>{const previous=state.settings.logoColor;state.settings.logoColor=logoInput.value;try{saveState();updateLogoControls();}catch(_){state.settings.logoColor=previous;applySettings();logoStatus.textContent='Não foi possível salvar a cor. Tente novamente.';}};
+  document.getElementById('resetLogoColor').onclick=()=>{const previous=state.settings.logoColor;state.settings.logoColor='';try{saveState();renderSettings();}catch(_){state.settings.logoColor=previous;applySettings();logoStatus.textContent='Não foi possível salvar a cor. Tente novamente.';}};
+  updateLogoControls();
+  document.getElementById('themeSelect').onchange=e=>{chooseTheme(e.target.value);renderSettings();};
   document.getElementById('fontSelect').onchange=e=>{state.settings.font=e.target.value;saveState()};
   document.getElementById('calendarSwitch').onclick=()=>{state.settings.googleCalendar=!state.settings.googleCalendar;saveState();renderSettings()};
   document.getElementById('notificationSwitch').onclick=toggleNotifications;
@@ -624,3 +647,4 @@ document.getElementById('importInput').addEventListener('change',e=>{
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
 render();
 setTimeout(runDueNotifications,800);
+
