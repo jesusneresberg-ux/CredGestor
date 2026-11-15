@@ -112,24 +112,7 @@
   // Juros simples proporcionais pelo número real de dias de cada mês atravessado.
   // Ex.: 20% a.m. em mês de 30 dias = 20/30 por dia naquele mês.
   function proportionalInterest22(base,monthlyRate,start,end){
-    base=Number(base)||0; monthlyRate=Number(monthlyRate)||0;
-    const s=new Date(start),e=new Date(end);
-    if(!base||!monthlyRate||Number.isNaN(s.getTime())||Number.isNaN(e.getTime())||e<=s)return {interest:0,days:0,segments:[]};
-    let cursor=new Date(s.getFullYear(),s.getMonth(),s.getDate());
-    const finish=new Date(e.getFullYear(),e.getMonth(),e.getDate());
-    let interest=0,days=0; const segments=[];
-    while(cursor<finish){
-      const dim=daysInMonth22(cursor);
-      const nextMonth=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
-      const segmentEnd=nextMonth<finish?nextMonth:finish;
-      const segDays=Math.max(0,Math.round((segmentEnd-cursor)/86400000));
-      const ratePerDay=monthlyRate/dim;
-      const value=base*ratePerDay*segDays;
-      interest+=value; days+=segDays;
-      segments.push({month:`${String(cursor.getMonth()+1).padStart(2,'0')}/${cursor.getFullYear()}`,days:segDays,monthDays:dim,ratePerDay,value});
-      cursor=segmentEnd;
-    }
-    return {interest,days,segments};
+    return {interest:0,days:0,segments:[]};
   }
   window.CrediGestorInterestV22=proportionalInterest22;
 
@@ -138,10 +121,10 @@
     const due=dueDate22(k,x,ref);
     const base=principal22(k,x);
     const rate=monthlyRate22(k,x);
-    const scheduled=Number(x?.amount)||Number(k.installmentAmount)||Number(k.summaryTotal)||base*(1+rate);
+    const scheduled=Math.max(0,Number(x?.remaining??x?.amount)||0);
     const overdue=dateKey22(asOf)>dateKey22(due);
     const calc=overdue?proportionalInterest22(base,rate,due,asOf):{interest:0,days:0,segments:[]};
-    const updated=overdue?Math.max(scheduled,base+calc.interest):scheduled;
+    const updated=scheduled;
     return {due,base,rate,scheduled,updated,overdue,...calc};
   }
 
@@ -188,7 +171,7 @@
         <div class="v22-calc">
           <div class="v22-kpi"><small>Valor original</small><strong>${brl22(c.scheduled)}</strong></div>
           <div class="v22-kpi"><small>Valor atualizado</small><strong id="v22Updated">${brl22(c.updated)}</strong></div>
-          <div class="v22-kpi"><small>Juros proporcionais</small><strong id="v22Interest">${brl22(c.interest)}</strong></div>
+          <div class="v22-kpi"><small>Acréscimo automático</small><strong id="v22Interest">${brl22(c.interest)}</strong></div>
           <div class="v22-kpi"><small>Dias considerados</small><strong id="v22Days">${c.days}</strong></div>
         </div>
         <div class="v22-grid" style="margin-top:12px">
@@ -232,7 +215,7 @@
       <div class="v22-grid"><div class="field"><label>Status</label><select id="v22Enabled"><option value="1" ${s.enabled?'selected':''}>Ativado</option><option value="0" ${!s.enabled?'selected':''}>Desativado</option></select></div><div class="field"><label>Mensagem padrão</label><select id="v22Default"><option value="auto" ${s.assistantDefault==='auto'?'selected':''}>Automática pela situação</option><option value="due_today" ${s.assistantDefault==='due_today'?'selected':''}>Vencimento hoje</option><option value="upcoming" ${s.assistantDefault==='upcoming'?'selected':''}>Próximo vencimento</option><option value="overdue" ${s.assistantDefault==='overdue'?'selected':''}>Atraso</option></select></div></div>
       <label class="check"><input type="checkbox" id="v22Pix" ${s.includePix?'checked':''}> Incluir PIX automaticamente</label>
       <label class="check"><input type="checkbox" id="v22Breakdown" ${s.includeBreakdown?'checked':''}> Mostrar memória de cálculo dos juros</label>
-      <div class="v22-assistant-card"><strong>Regra de juros proporcional</strong><div class="muted" style="margin-top:5px">A taxa mensal é dividida pela quantidade real de dias de cada mês. Em períodos que atravessam meses diferentes, cada trecho usa 28, 29, 30 ou 31 dias conforme o calendário.</div></div>
+      <div class="v22-assistant-card"><strong>Juros do contrato</strong><div class="muted" style="margin-top:5px">Os juros iniciais seguem a taxa do contrato. Novos juros são adicionados manualmente, sem cálculo por dias.</div></div>
       <div class="field"><label>Modelo — cobrança em atraso</label><textarea id="v22TplOverdue">${esc22(s.templates.overdue)}</textarea><div class="muted">Campos: {nome}, {referencia}, {vencimento}, {data_atual}, {valor_atualizado}, {valor_original}, {juros}, {dias}, {juros_bloco}, {pix_bloco}</div></div>
       <div class="actions"><button type="button" class="primary-btn" id="v22SaveSettings">Salvar assistente</button></div>
     </div></div>`);

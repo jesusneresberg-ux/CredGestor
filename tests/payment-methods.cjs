@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   fs.readFile(file,(e,data)=>{if(e)res.writeHead(404).end();else{res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(data)}});
 });
-const loan=id=>({id:id+'-loan',title:id+'-loan',active:true,initialPrincipal:10000,interestRate:10,billingType:'interest',fixedAmount:0,startDate:'2026-09-15',baseDueDay:15,payments:[],movements:[]});
+const loan=id=>({id:id+'-loan',title:id+'-loan',active:true,initialPrincipal:10000,interestRate:10,billingType:'interest',fixedAmount:0,startDate:'2026-10-15',baseDueDay:15,payments:[],movements:[]});
 const fixtures=['parcel','partial','payoff','amort','early','other','switch','only-parcel','only-partial','only-early','new-only'].map(id=>({id,name:'Cliente '+id,phone:'11999999999',level:'Bronze',creditLimit:20000,guarantees:[],crm:[],contracts:[loan(id)]}));
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -57,7 +57,7 @@ const fixtures=['parcel','partial','payoff','amort','early','other','switch','on
       assert.match(await page.locator('#receiptTextV25').inputValue(),/Pagamento com penhora[\s\S]*Chácara/);
       const x=await info('amort');assert.equal(x.balance,5000);assert.equal(x.k.movements[0].paymentDetails,'Chácara na zona rural — lote 15');
     });
-    await check('Encerramento proporcional mantém detalhes após mudar a data',async()=>{
+    await check('Encerramento mantém detalhes após mudar a data',async()=>{
       await open('early','#v28EarlyClose');await penhora('ec');await page.locator('#ecDate').fill('2026-11-05');
       assert.equal(await page.locator('#ecMethod').inputValue(),'Penhora');assert.match(await page.locator('#ecPaymentDetails').inputValue(),/Chácara/);
       await page.locator('#ecConfirm').click();await page.waitForSelector('#receiptTextV25');

@@ -118,7 +118,7 @@
       const refresh=()=>{
         const a=Number(amount.value)||0,newValue=oldBalance+(kind.value==='increase'?a:-a);
         document.getElementById('v29Balance').textContent=brl(Math.max(0,newValue));
-        document.getElementById('v29Interest').textContent=k.billingType==='interest'?`Juros mensais sobre o saldo: ${brl(Math.max(0,newValue)*rate/100)}`:'Parcela fixa: '+brl(monthlyDue(k));
+        document.getElementById('v29Interest').textContent='Juros iniciais preservados. Novos juros devem ser adicionados manualmente.';
       };
       kind.onchange=refresh;amount.oninput=refresh;refresh();
       document.getElementById('v29Back').onclick=()=>window.openPaymentsHubV21(cl.id,k.id,context?.ref);
@@ -161,7 +161,8 @@
     if(!Number.isFinite(amount)||amount<=0||Math.abs(cents(amount)-amount*100)>1e-7)throw Error('Informe um valor positivo com até duas casas decimais.');
     if(!day(date)||date>dateISO(new Date()))throw Error('Informe uma data válida, até hoje.');
     const [y,m]=reference.split('-').map(Number),row=chargeFor(cl,k,y,m-1,date);
-    if(row.status==='not_due'||row.status==='capitalized'||dateISO(row.due)>=date)throw Error('Escolha uma cobrança vencida e ainda não incorporada ao capital.');
+    const first=firstPaymentDate(k);
+    if(!first||reference<dateISO(first).slice(0,7)||row.status==='capitalized')throw Error('Escolha uma referência a partir da primeira cobrança do contrato.');
     const before=JSON.parse(JSON.stringify(k));
     try{
       const entry={id:uid('late'),reference,amount:money(cents(amount)),date,note:String(note).trim(),createdAt:new Date().toISOString()};
@@ -172,9 +173,9 @@
   window.CrediGestorOverdueV29.addManual=addManualLateInterest;
   function openManualLateInterest(){
     const pair=getContext();if(!pair)return;const {cl,k}=pair;
-    openModal(`<h2>Inserir juros de atraso</h2><p class="muted">${esc(cl.name)} · ${esc(k.loanCode||k.title||'Contrato')}</p>
+    openModal(`<h2>Adicionar juros manualmente</h2><p class="muted">${esc(cl.name)} · ${esc(k.loanCode||k.title||'Contrato')}</p>
       <div class="field"><label for="v29LateRef">Referência da cobrança</label><input id="v29LateRef" type="month" value="${esc(context.ref||dateISO(new Date()).slice(0,7))}" required></div>
-      <div class="field"><label for="v29LateAmount">Juros de atraso (R$)</label><input id="v29LateAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
+      <div class="field"><label for="v29LateAmount">Juros manuais (R$)</label><input id="v29LateAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
       <div class="field"><label for="v29LateDate">Data do lançamento</label><input id="v29LateDate" type="date" value="${dateISO(new Date())}" required></div>
       <div class="field"><label for="v29LateReason">Motivo / observação</label><textarea id="v29LateReason"></textarea></div>
       <p class="rule-note">O valor será acrescentado apenas à cobrança escolhida. O capital não muda. Os juros de atraso não são calculados automaticamente.</p>
@@ -232,7 +233,7 @@
       }
     };
     const manual=document.createElement('button');manual.type='button';manual.className='v21-choice';manual.id='v29ManualLate';
-    manual.innerHTML='<span class="ico">✎</span><span><b>Inserir juros de atraso</b><small>Informar manualmente o valor e a referência da cobrança.</small></span>';
+    manual.innerHTML='<span class="ico">✎</span><span><b>Adicionar juros manualmente</b><small>Informar manualmente o valor e a referência da cobrança.</small></span>';
     manual.onclick=openManualLateInterest;
     grid.append(inc,manual,st);
     const [y,m]=String(context?.ref||'').split('-').map(Number);
