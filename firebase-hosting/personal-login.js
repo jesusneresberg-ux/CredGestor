@@ -76,7 +76,7 @@
   async function launch(){
     // Start every download together, but execute in dependency order.
     // No application code runs before the authenticated wallet is selected.
-    await Promise.all(window.CREDIGESTOR_PERSONAL_SCRIPTS.map(name=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.async=false;s.src=name+'?v=public-signup-fast-2';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);})));
+    await Promise.all(window.CREDIGESTOR_PERSONAL_SCRIPTS.map(name=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.async=false;s.src=name+'?v=66-valores-cartoes';s.onload=resolve;s.onerror=()=>reject(Error('Não foi possível carregar a tela. Recarregue a página.'));document.body.append(s);})));
     const reversed=loadedUid===OWNER?window.CrediGestorCapitalization.reverseAutomatic():null;
     if(reversed)openModal('<h2>Juros automáticos retirados</h2><p>Foram retirados '+brl(reversed.total)+' de '+reversed.contracts+' contrato(s), referentes à atualização automática anterior.</p><p>Pagamentos e movimentos manuais foram preservados. Uma cópia anterior foi guardada neste aparelho. Novos juros de atraso devem ser lançados em Pagamentos → Inserir juros de atraso.</p>');
     document.getElementById('accountQuickBtn').onclick=openAccount;

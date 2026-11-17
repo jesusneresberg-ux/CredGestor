@@ -93,3 +93,8 @@ button{cursor:pointer}
 .progress{height:9px;background:#eaecf0;border-radius:999px;overflow:hidden}.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:999px}
 .note{font-size:11px;color:var(--muted);line-height:1.45}
 @media (min-width:700px){body{padding:18px 0}.app-shell{border-radius:32px;overflow:hidden;box-shadow:0 30px 100px rgba(15,23,42,.15);background:rgba(255,255,255,.25)}.bottom-nav{bottom:18px;border-radius:0 0 32px 32px}.topbar{border-radius:32px 32px 0 0}}
+
+/* Currency rows stay separate from their action buttons in every WebView. */
+html body #app .charge-value-row{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:12px}
+html body #app .charge-value-row>.money{display:block!important;width:100%!important;white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;flex-shrink:0!important}
+html body #app .charge-value-row>.inline-actions{width:100%;min-width:0;flex:0 1 auto!important;margin:0!important}

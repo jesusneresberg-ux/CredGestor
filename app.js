@@ -220,8 +220,8 @@ function chargeItemHtml(x){
       </div>
       <span class="status ${x.status}">${x.status==='paid'?'PAGO':x.status==='late'?'ATRASADO':'ABERTO'}</span>
     </div>
-    <div class="row space" style="margin-top:11px">
-      <strong class="money">${brl(x.amount)}</strong>
+    <div class="row space charge-value-row" style="margin-top:11px;display:flex;flex-direction:column;align-items:stretch">
+      <strong class="money" style="white-space:nowrap;overflow-wrap:normal;word-break:normal;flex-shrink:0">${brl(x.amount)}</strong>
       <div class="inline-actions" style="margin:0">
         ${x.status!=='paid'?`<button class="small-btn pay-btn" data-c="${x.cl.id}" data-k="${x.c.id}" data-r="${x.ref}">Marcar pago</button>`:''}
         ${state.settings.googleCalendar?`<button class="small-btn cal-btn" data-c="${x.cl.id}" data-k="${x.c.id}" data-r="${x.ref}">Agenda</button>`:''}
