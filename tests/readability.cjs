@@ -14,6 +14,29 @@ const server=http.createServer((req,res)=>{
  await context.route('**/personal-login.js*',r=>r.fulfill({contentType:'application/javascript',body:'(async()=>{document.getElementById("app").style.display="";document.body.dataset.v26Locked="false";document.getElementById("v261Boot").remove();for(const name of window.CREDIGESTOR_PERSONAL_SCRIPTS)await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=name;s.onload=resolve;s.onerror=reject;document.body.appendChild(s);});window.testBooted=true;})()'}));
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.testBooted);
+ // Dashboard and charges share the currency/action row. Exercise real generated rows.
+ for(const width of [320,360,390,768,1280]){
+  await page.setViewportSize({width,height:800});
+  for(const scale of [1,1.5]){
+   await page.evaluate(scale=>{
+    document.documentElement.style.setProperty('--app-font-scale',scale);
+    const host=document.getElementById('view');
+    host.innerHTML=chargeItemHtml({cl:{id:'test',name:'Cliente de teste'},c:{id:'loan'},due:new Date(2026,10,18),ref:'2026-11',status:'open',remaining:1234567.89});
+    host.querySelector('.inline-actions').innerHTML='<button class="small-btn">💳 Pagamentos</button><button class="small-btn">📤 Resumo</button><button class="small-btn">Agenda</button><button class="small-btn">WhatsApp + PIX</button><button class="small-btn">🤖 Assistente WhatsApp</button>';
+   },scale);
+   const layout=await page.evaluate(()=>{
+    const money=document.querySelector('#view .money'),actions=document.querySelector('#view .inline-actions');
+    const range=document.createRange();range.selectNodeContents(money);
+    return {lines:range.getClientRects().length,money:money.getBoundingClientRect().toJSON(),actions:actions.getBoundingClientRect().toJSON(),overflow:document.documentElement.scrollWidth>innerWidth};
+   });
+   assert.equal(layout.lines,1,JSON.stringify({width,scale,layout}));
+   assert.ok(layout.money.right<=width,JSON.stringify(layout));
+   assert.ok(!layout.overflow,JSON.stringify(layout));
+   if(width<=600)assert.ok(layout.actions.top>=layout.money.bottom,JSON.stringify(layout));
+  }
+ }
+ await page.setViewportSize({width:360,height:800});
+ await page.evaluate(()=>{document.documentElement.style.setProperty('--app-font-scale','1');});
  await page.click('[data-view="settings"]');await page.waitForSelector('#fontSizeSelect');
  assert.equal(await page.locator('#fontSizeSelect').inputValue(),'100');
  await page.selectOption('#fontSizeSelect','150');
