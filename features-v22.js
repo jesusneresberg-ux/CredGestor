@@ -1,11 +1,11 @@
-// CrediGestor v22 — Assistente de Cobrança via WhatsApp + juros proporcionais por dias do mês.
+// CrediGestor v22 — Assistente de Cobrança via WhatsApp + juros mensais do contrato.
 (function(){
   'use strict';
 
   const VERSION='22';
   const DEFAULTS={
     enabled:true,
-    interestMode:'calendar_days',
+    interestMode:'monthly',
     assistantDefault:'due_today',
     includePix:true,
     includeBreakdown:true,
@@ -46,7 +46,7 @@
     if(!state.settings.collectionAssistant22||typeof state.settings.collectionAssistant22!=='object')state.settings.collectionAssistant22={};
     const s=state.settings.collectionAssistant22;
     if(typeof s.enabled!=='boolean')s.enabled=DEFAULTS.enabled;
-    if(!s.interestMode)s.interestMode=DEFAULTS.interestMode;
+    s.interestMode=DEFAULTS.interestMode;
     if(!s.assistantDefault)s.assistantDefault=DEFAULTS.assistantDefault;
     if(typeof s.includePix!=='boolean')s.includePix=DEFAULTS.includePix;
     if(typeof s.includeBreakdown!=='boolean')s.includeBreakdown=DEFAULTS.includeBreakdown;
@@ -95,40 +95,17 @@
     return new Date();
   }
 
-  // Juros simples proporcionais pelo número real de dias de cada mês atravessado.
-  // Ex.: 20% a.m. em mês de 30 dias = 20/30 por dia naquele mês.
-  function proportionalInterest22(base,monthlyRate,start,end){
-    base=Number(base)||0; monthlyRate=Number(monthlyRate)||0;
-    const s=new Date(start),e=new Date(end);
-    if(!base||!monthlyRate||Number.isNaN(s.getTime())||Number.isNaN(e.getTime())||e<=s)return {interest:0,days:0,segments:[]};
-    let cursor=new Date(s.getFullYear(),s.getMonth(),s.getDate());
-    const finish=new Date(e.getFullYear(),e.getMonth(),e.getDate());
-    let interest=0,days=0; const segments=[];
-    while(cursor<finish){
-      const dim=daysInMonth22(cursor);
-      const nextMonth=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
-      const segmentEnd=nextMonth<finish?nextMonth:finish;
-      const segDays=Math.max(0,Math.round((segmentEnd-cursor)/86400000));
-      const ratePerDay=monthlyRate/dim;
-      const value=base*ratePerDay*segDays;
-      interest+=value; days+=segDays;
-      segments.push({month:`${String(cursor.getMonth()+1).padStart(2,'0')}/${cursor.getFullYear()}`,days:segDays,monthDays:dim,ratePerDay,value});
-      cursor=segmentEnd;
-    }
-    return {interest,days,segments};
-  }
-  window.CrediGestorInterestV22=proportionalInterest22;
+  // Compatibilidade: este cálculo não produz acréscimos por atraso ou por dias.
+  window.CrediGestorInterestV22=()=>({interest:0,days:0,segments:[]});
 
   function calculation22(hit,asOf=new Date()){
-    const {k,x,ref}=hit;
-    const due=dueDate22(k,x,ref);
-    const base=principal22(k,x);
-    const rate=monthlyRate22(k,x);
-    const scheduled=Number(x?.amount)||Number(k.installmentAmount)||Number(k.summaryTotal)||base*(1+rate);
-    const overdue=asOf>due;
-    const calc=overdue?proportionalInterest22(base,rate,due,asOf):{interest:0,days:0,segments:[]};
-    const updated=overdue?Math.max(scheduled,base+calc.interest):scheduled;
-    return {due,base,rate,scheduled,updated,overdue,...calc};
+    const {cl,k,ref}=hit,[year,month]=String(ref).split('-').map(Number);
+    const x=typeof chargeFor==='function'&&year&&month?chargeFor(cl,k,year,month-1,asOf):hit.x;
+    const due=dueDate22(k,x,ref),base=principal22(k,x),rate=monthlyRate22(k,x);
+    const scheduled=Number(x?.amount??k.installmentAmount??k.summaryTotal??(base*rate))||0;
+    const updated=Math.max(0,Number(x?.remaining??scheduled)||0);
+    const interest=typeof monthlyDue==='function'?monthlyDue(k):scheduled;
+    return {due,base,rate,scheduled,updated,overdue:dateKey22(asOf)>dateKey22(due),interest,days:0,segments:[]};
   }
 
   function pixBlock22(){
@@ -138,9 +115,7 @@
     return `\n\n💳 *Pagamento via PIX*\nTipo: ${type}\nChave: ${key}${name?`\nFavorecido: ${name}`:''}`;
   }
   function interestBlock22(c){
-    if(!c.overdue||c.interest<=0)return '';
-    const pctDay=c.rate?((c.rate/(c.segments[0]?.monthDays||30))*100):0;
-    return `\n\n📊 Atualização proporcional\nCapital-base: ${brl22(c.base)}\nDias considerados: ${c.days}\nJuros calculados: ${brl22(c.interest)}${pctDay?`\nTaxa diária inicial: ${pctDay.toLocaleString('pt-BR',{maximumFractionDigits:4})}%`:''}`;
+    return `\n\n📊 Cobrança mensal\nJuros/parcela mensal: ${brl22(c.interest)}\nSaldo desta referência: ${brl22(c.updated)}`;
   }
   function message22(hit,type,asOf=new Date()){
     const s=ensureSettings22(),c=calculation22(hit,asOf),{cl,ref}=hit;
@@ -173,12 +148,12 @@
         <div class="v22-calc">
           <div class="v22-kpi"><small>Valor original</small><strong>${brl22(c.scheduled)}</strong></div>
           <div class="v22-kpi"><small>Valor atualizado</small><strong id="v22Updated">${brl22(c.updated)}</strong></div>
-          <div class="v22-kpi"><small>Juros proporcionais</small><strong id="v22Interest">${brl22(c.interest)}</strong></div>
-          <div class="v22-kpi"><small>Dias considerados</small><strong id="v22Days">${c.days}</strong></div>
+          <div class="v22-kpi"><small>Juros/parcela mensal</small><strong id="v22Interest">${brl22(c.interest)}</strong></div>
+          <div class="v22-kpi"><small>Cálculo</small><strong id="v22Days">Mensal</strong></div>
         </div>
         <div class="v22-grid" style="margin-top:12px">
           <div class="field"><label>Tipo de mensagem</label><select id="v22Type"><option value="due_today">Vencimento hoje</option><option value="upcoming">Próximo vencimento</option><option value="overdue">Cobrança em atraso</option><option value="negotiate">Negociação</option><option value="paid">Confirmação de pagamento</option></select></div>
-          <div class="field"><label>Atualizar valor até</label><input type="date" id="v22AsOf" value="${dateKey22(new Date())}"></div>
+          <div class="field"><label>Data de referência</label><input type="date" id="v22AsOf" value="${dateKey22(new Date())}"></div>
         </div>
         <div class="field"><label>Mensagem</label><textarea id="v22Message" style="min-height:170px"></textarea></div>
         <div class="v22-preview" id="v22Preview"></div>
@@ -190,7 +165,7 @@
     function refresh(){
       const d=dateEl.value?new Date(dateEl.value+'T12:00:00'):new Date();
       const cc=calculation22(hit,d),m=message22(hit,typeEl.value,d);
-      document.getElementById('v22Updated').textContent=brl22(cc.updated);document.getElementById('v22Interest').textContent=brl22(cc.interest);document.getElementById('v22Days').textContent=cc.days;
+      document.getElementById('v22Updated').textContent=brl22(cc.updated);document.getElementById('v22Interest').textContent=brl22(cc.interest);document.getElementById('v22Days').textContent='Mensal';
       msgEl.value=m;prev.textContent=m;
     }
     typeEl.onchange=refresh;dateEl.onchange=refresh;msgEl.oninput=()=>{prev.textContent=msgEl.value};refresh();
@@ -213,11 +188,11 @@
     const s=ensureSettings22();
     const dataTitle=[...document.querySelectorAll('.section-title h2')].find(x=>x.textContent.trim()==='Dados e backup');
     const anchor=dataTitle?.closest('.section-title')||document.getElementById('view')?.lastElementChild;if(!anchor)return;
-    anchor.insertAdjacentHTML('beforebegin',`<div id="assistantSettingsV22" class="v22-settings"><div class="section-title"><h2>Assistente de Cobrança</h2><small>WhatsApp + juros por dia</small></div><div class="card">
+    anchor.insertAdjacentHTML('beforebegin',`<div id="assistantSettingsV22" class="v22-settings"><div class="section-title"><h2>Assistente de Cobrança</h2><small>WhatsApp + juros mensais</small></div><div class="card">
       <div class="v22-grid"><div class="field"><label>Status</label><select id="v22Enabled"><option value="1" ${s.enabled?'selected':''}>Ativado</option><option value="0" ${!s.enabled?'selected':''}>Desativado</option></select></div><div class="field"><label>Mensagem padrão</label><select id="v22Default"><option value="auto" ${s.assistantDefault==='auto'?'selected':''}>Automática pela situação</option><option value="due_today" ${s.assistantDefault==='due_today'?'selected':''}>Vencimento hoje</option><option value="upcoming" ${s.assistantDefault==='upcoming'?'selected':''}>Próximo vencimento</option><option value="overdue" ${s.assistantDefault==='overdue'?'selected':''}>Atraso</option></select></div></div>
       <label class="check"><input type="checkbox" id="v22Pix" ${s.includePix?'checked':''}> Incluir PIX automaticamente</label>
       <label class="check"><input type="checkbox" id="v22Breakdown" ${s.includeBreakdown?'checked':''}> Mostrar memória de cálculo dos juros</label>
-      <div class="v22-assistant-card"><strong>Regra de juros proporcional</strong><div class="muted" style="margin-top:5px">A taxa mensal é dividida pela quantidade real de dias de cada mês. Em períodos que atravessam meses diferentes, cada trecho usa 28, 29, 30 ou 31 dias conforme o calendário.</div></div>
+      <div class="v22-assistant-card"><strong>Regra de juros mensais</strong><div class="muted" style="margin-top:5px">A cobrança usa os juros mensais integrais do contrato, descontando pagamentos e descontos registrados na referência. A quantidade de dias não altera os juros.</div></div>
       <div class="field"><label>Modelo — cobrança em atraso</label><textarea id="v22TplOverdue">${esc22(s.templates.overdue)}</textarea><div class="muted">Campos: {nome}, {referencia}, {vencimento}, {data_atual}, {valor_atualizado}, {valor_original}, {juros}, {dias}, {juros_bloco}, {pix_bloco}</div></div>
       <div class="actions"><button type="button" class="primary-btn" id="v22SaveSettings">Salvar assistente</button></div>
     </div></div>`);

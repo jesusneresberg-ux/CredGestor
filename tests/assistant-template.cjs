@@ -39,4 +39,8 @@ const other=setup('outra-conta');
 assert.equal(other.state.settings.pixKey,'outra');
 assert.equal(other.state.settings.pixName,'Outro');
 assert.equal(other.state.settings.collectionAssistant22.templates.due_today,'Modelo antigo');
+assert.equal(owner.state.settings.collectionAssistant22.interestMode,'monthly');
+for(const [start,end] of [['2026-02-01','2026-02-28'],['2026-11-01','2026-11-30'],['2026-12-01','2027-01-10']]){
+ assert.equal(owner.context.window.CrediGestorInterestV22(1000,0.2,start,end).interest,0);
+}
 console.log('PASS: modelo exato, vencimento do contrato, antes/no dia/após vencimento e isolamento entre contas.');

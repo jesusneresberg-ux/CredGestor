@@ -71,7 +71,7 @@ const fixtures=[['today','Hoje','2026-09-08',100],['late','Atrasado','2026-09-01
     });
     await check('Quitação de capital mantém juros residuais após adiantamento',async()=>{
       await page.evaluate(()=>{state.clients.find(c=>c.id==='late').contracts[0].billingType='interest';saveState()});
-      await open('late','late');assert.match(await page.locator('#modalContent').innerText(),/1\.102,58/);
+      await open('late','late');assert.match(await page.locator('#modalContent').innerText(),/1\.180,00/);
     });
     await check('Sem telefone: adiantamento salvo e comprovante disponível para copiar',async()=>{
       await page.evaluate(()=>{state.clients.find(c=>c.id==='late').phone='';saveState()});

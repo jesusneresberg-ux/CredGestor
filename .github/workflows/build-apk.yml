@@ -32,6 +32,6 @@ jobs:
       - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: CrediGestor-icone-personalizavel
+          name: CrediGestor-juros-mensais-2026.11.17
           path: android/app/build/outputs/apk/debug/app-debug.apk
 

@@ -194,8 +194,7 @@
     const grid=document.querySelector('#modalContent .v21-choice-grid'),pair=getContext();
     if(!grid||!pair||document.getElementById('v29Adjust'))return;
     const selected=document.getElementById('v21ChargeRef');if(selected&&context)context.ref=selected.value;
-    // A opção de quitação usa o extrato completo (juros vencidos, juros diários
-    // e proporcionais do período). A quitação antiga considerava só o mês atual.
+    // A quitação usa o extrato completo com juros mensais e saldos vencidos.
     const payoff=document.getElementById('v21Payoff');
     if(payoff&&typeof window.openEarlyCloseV28==='function'){
       payoff.onclick=()=>window.openEarlyCloseV28(pair.cl.id,pair.k.id);
