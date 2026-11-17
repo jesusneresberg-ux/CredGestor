@@ -21,7 +21,7 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(scale=>{
     document.documentElement.style.setProperty('--app-font-scale',scale);
     const host=document.getElementById('view');
-    host.innerHTML=chargeItemHtml({cl:{id:'test',name:'Cliente de teste'},c:{id:'loan'},due:new Date(2026,10,18),ref:'2026-11',status:'open',remaining:1234567.89});
+    host.innerHTML=chargeItemHtml({cl:{id:'test',name:'Cliente de teste'},c:{id:'loan'},due:new Date(2026,10,18),ref:'2026-11',status:'open',amount:1234567.89,remaining:1234567.89});
     host.querySelector('.inline-actions').innerHTML='<button class="small-btn">💳 Pagamentos</button><button class="small-btn">📤 Resumo</button><button class="small-btn">Agenda</button><button class="small-btn">WhatsApp + PIX</button><button class="small-btn">🤖 Assistente WhatsApp</button>';
    },scale);
    const layout=await page.evaluate(()=>{
