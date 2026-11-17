@@ -1,4 +1,4 @@
-// CrediGestor v29 — Encerramento de contrato com juros proporcionais e acerto de contas.
+// CrediGestor v29 — Encerramento de contrato com juros mensais e acerto de contas.
 (function(){
   'use strict';
 
@@ -16,74 +16,26 @@
   function fmtDate(value){
     const d=dateOnly(value);return d?d.toLocaleDateString('pt-BR'):'—';
   }
-  function daysInMonth(value){const d=dateOnly(value)||new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
-
-  // Reutiliza cálculo proporcional da v28 se disponível, senão usa implementação local.
-  const proportionalInterestFn=window.CrediGestorInterestV28||function(base,monthlyRatePercent,start,end){
-    const principal=Math.max(0,num(base)),rate=Math.max(0,num(monthlyRatePercent))/100;
-    const from=dateOnly(start),to=dateOnly(end);
-    if(!principal||!rate||!from||!to||to<=from)return {interest:0,days:0,segments:[]};
-    let cursor=from,interest=0,days=0;const segments=[];
-    while(cursor<to){
-      const monthEnd=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
-      const segmentEnd=monthEnd<to?monthEnd:to;
-      const segmentDays=Math.max(0,Math.round((segmentEnd-cursor)/DAY));
-      const monthDays=daysInMonth(cursor),value=principal*rate*(segmentDays/monthDays);
-      interest+=value;days+=segmentDays;
-      segments.push({month:`${String(cursor.getMonth()+1).padStart(2,'0')}/${cursor.getFullYear()}`,days:segmentDays,monthDays,value});
-      cursor=segmentEnd;
-    }
-    return {interest,days,segments};
-  };
-
   function balance(k){
     try{return Math.max(0,num(contractBalance(k)))}catch(_){return Math.max(0,num(k?.currentPrincipal)||num(k?.initialPrincipal))}
   }
   function rate(k){return Math.max(0,num(k?.interestRate))}
 
-  // Calcula juros proporcionais desde o último vencimento até a data de encerramento.
+  // Encerramento legado também usa competências mensais inteiras.
   function calculateSettlement(cl,k,settlementDate){
-    const principal=balance(k);
-    const monthlyRate=rate(k);
-    const at=dateOnly(settlementDate)||new Date();
-
-    // Encontra o último vencimento não pago ou parcialmente pago para calcular juros de atraso.
-    let lastDue=null;
-    let outstandingAmount=0;
-
-    if(typeof chargeFor==='function'){
-      for(let off=-12;off<=0;off++){
-        const d=new Date(at.getFullYear(),at.getMonth()+off,1);
-        const x=chargeFor(cl,k,d.getFullYear(),d.getMonth());
-        if(x&&x.status!=='not_due'&&dateOnly(x.due)<=at&&num(x.remaining)>0){
-          if(!lastDue||dateOnly(x.due)>dateOnly(lastDue)){
-            lastDue=x;
-          }
-        }
+    const principal=balance(k),monthlyRate=rate(k),at=dateOnly(settlementDate)||new Date();
+    const first=typeof firstPaymentDate==='function'?firstPaymentDate(k):dateOnly(k.startDate);
+    let interest=0;
+    if(first&&typeof chargeFor==='function'){
+      const start=first.getFullYear()*12+first.getMonth();
+      for(let i=start;i<start+1200;i++){
+        const x=chargeFor(cl,k,Math.floor(i/12),i%12);
+        if(!x)continue;
+        if(x.status!=='not_due'&&x.status!=='capitalized')interest+=Math.max(0,num(x.remaining));
+        if(dateOnly(x.due)>=at)break;
       }
     }
-
-    // Se há cobrança em aberto, calcula juros proporcionais desde o vencimento.
-    let lateInterest={interest:0,days:0,segments:[]};
-    if(lastDue&&lastDue.due){
-      const due=dateOnly(lastDue.due);
-      if(due&&at>due){
-        lateInterest=proportionalInterestFn(principal,monthlyRate,due,at);
-      }
-    }
-
-    // Total devido = saldo principal + juros proporcionais de atraso.
-    const totalDue=principal+lateInterest.interest;
-
-    return {
-      principal,
-      monthlyRate,
-      lateInterest:lateInterest.interest,
-      lateDays:lateInterest.days,
-      lateSegments:lateInterest.segments,
-      totalDue,
-      settlementDate:at
-    };
+    return {principal,monthlyRate,lateInterest:Math.round(interest*100)/100,lateDays:0,lateSegments:[],totalDue:principal+Math.round(interest*100)/100,settlementDate:at};
   }
 
   // Gera extrato de encerramento formatado para compartilhamento.
@@ -101,8 +53,8 @@
       `• Saldo principal: ${money(settlement.principal)}`,
     ];
 
-    if(settlement.lateDays>0){
-      lines.push(`• Juros proporcionais (${settlement.lateDays} dias): ${money(settlement.lateInterest)}`);
+    if(settlement.lateInterest>0){
+      lines.push(`• Juros mensais pendentes: ${money(settlement.lateInterest)}`);
       if(settlement.lateSegments.length){
         const segText=settlement.lateSegments.map(s=>`${s.days} dia(s) em ${s.month}`).join('; ');
         lines.push(`  Memória: ${segText}`);
@@ -134,9 +86,9 @@
         <div class="muted">Saldo principal atual</div>
         <strong style="font-size:28px">${money(settlement.principal)}</strong>
       </div>
-      ${settlement.lateDays>0?`
+      ${settlement.lateInterest>0?`
       <div class="card" style="margin-top:12px;border-left:4px solid var(--accent)">
-        <div class="muted">Juros proporcionais (${settlement.lateDays} dias)</div>
+        <div class="muted">Juros mensais pendentes</div>
         <strong style="font-size:22px;color:var(--accent)">${money(settlement.lateInterest)}</strong>
         <div class="muted" style="margin-top:6px;font-size:12px">
           ${settlement.lateSegments.map(s=>`${s.days} dia(s) em ${s.month}`).join('; ')}
@@ -307,5 +259,5 @@
     };
   }
 
-  window.__credigestorV29={version:VERSION,settlement:true,proportionalInterestOnClose:true};
+  window.__credigestorV29={version:VERSION,settlement:true,monthlyInterestOnClose:true};
 })();
