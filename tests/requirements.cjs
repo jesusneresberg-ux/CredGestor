@@ -81,7 +81,7 @@ const clients = [
         await offlinePage.goto(process.env.BASE_URL||`http://127.0.0.1:${server.address().port}`);
         await offlinePage.evaluate(()=>navigator.serviceWorker.ready);
         await offlinePage.waitForFunction(()=>navigator.serviceWorker.controller);
-        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('credigestor-v32-juros-mensais')));
+        assert.ok(await offlinePage.evaluate(async()=>(await caches.keys()).includes('v66-valores-cartoes')));
         await offlineContext.setOffline(true);await offlinePage.reload();
         assert.equal(await offlinePage.evaluate(()=>window.__credigestorV26.version),'27.0');
         await offlinePage.locator('[data-view="charges"]').click();assert.equal(await offlinePage.locator('[data-v26-tab]').count(),3);
@@ -91,3 +91,4 @@ const clients = [
     if(results.some(r=>!r.passed))process.exitCode=1;
   } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
+
