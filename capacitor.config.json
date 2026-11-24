@@ -5,16 +5,8 @@
   "bundledWebRuntime": false,
   "server": {
     "url": "https://credigestor-testes.web.app/",
-    "cleartext": true,
+    "cleartext": false,
     "androidScheme": "https"
-  },
-  "android": {
-    "buildOptions": {
-      "keystorePath": "credigestor-keystore.jks",
-      "keystorePassword": "YOUR_KEYSTORE_PASSWORD",
-      "keystoreAlias": "credigestor",
-      "keystoreAliasPassword": "YOUR_ALIAS_PASSWORD"
-    }
   },
   "plugins": {
     "SplashScreen": {
