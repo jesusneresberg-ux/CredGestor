@@ -5,9 +5,12 @@
   const cents=v=>Math.round((Number(v)||0)*100);
   const clone=v=>JSON.parse(JSON.stringify(v));
   const rawCharge=chargeFor;
+  // Só há capitalização se o juro ainda estiver incorporado ao capital (movimento do lote).
+  // Após o estorno, um registro órfão não pode esconder a cobrança mensal.
+  const incorporated=k=>(k.movements||[]).some(v=>v.batchId===BATCH&&v.kind==='interest_capitalization');
   chargeFor=function(cl,k,y,m,asOf){
     const ref=`${y}-${String(m+1).padStart(2,'0')}`;
-    const snapshot=k.capitalizedCharges?.[ref];
+    const snapshot=incorporated(k)?k.capitalizedCharges?.[ref]:null;
     const at=asOf instanceof Date?ymd(asOf):String(asOf||todayISO()).slice(0,10);
     if(snapshot&&at>=snapshot.date){
       return {...rawCharge(cl,k,y,m,asOf),...snapshot.quote,

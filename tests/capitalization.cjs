@@ -26,6 +26,11 @@ function setup(){
  assert.equal(ctx.chargeFor(cl,restored,2026,10,'2026-11-10').remaining,120);
  // Capitalização passada permanece auditável e não volta à cobrança separada.
  restored.capitalizedCharges={'2026-11':{date:'2026-11-09',due:'2026-11-07',originalDue:'2026-11-07',incorporated:100,quote:{amount:100,baseAmount:100,paid:0,status:'late'}}};
+ // Registro órfão (juro não incorporado ao capital) não esconde a cobrança do mês.
+ assert.equal(ctx.chargeFor(cl,restored,2026,10,'2026-11-10').remaining,120);
+ assert.equal(ctx.chargeFor(cl,restored,2026,10,'2026-11-10').status,'late');
+ // Capitalização ainda incorporada permanece auditável e não volta à cobrança separada.
+ restored.movements=[...(restored.movements||[]),{id:'auto',batchId:ctx.window.CrediGestorCapitalization.batchId,kind:'interest_capitalization',type:'increase',amount:100,date:'2026-11-09'}];
  assert.equal(ctx.chargeFor(cl,restored,2026,10,'2026-11-10').remaining,0);
  assert.equal(ctx.chargeFor(cl,restored,2026,10,'2026-11-10').status,'capitalized');
 }
@@ -46,5 +51,12 @@ function setup(){
  k.movements=[{batchId:ctx.window.CrediGestorCapitalization.batchId,kind:'interest_capitalization',type:'increase',amount:100,date:'2026-11-09'}];
  const before=JSON.stringify(ctx.state);fail();assert.throws(()=>ctx.window.CrediGestorCapitalization.reverseAutomatic(),/save failed/);
  assert.equal(JSON.stringify(ctx.state),before);
+}
+{
+ // Contratos com vencimento no início de novembro: cobrança de 11/2026 deve existir mesmo com registro órfão.
+ const {ctx,client,loan}=setup();ctx.todayISO=()=> '2026-11-24';
+ const k=loan('orfao',{baseDueDay:5,startDate:'2026-10-05',capitalizedCharges:{'2026-11':{date:'2026-11-09',due:'2026-11-05',originalDue:'2026-11-05',incorporated:100,quote:{amount:100,status:'late'}}}});
+ const nov=ctx.chargeFor(client,k,2026,10,'2026-11-24');
+ assert.equal(nov.status,'late');assert.equal(nov.remaining,100);assert.equal(ctx.contractBalance(k),1000);
 }
 console.log('PASS: sem capitalização automática, estorno específico, recuperação, idempotência e CSV.');
