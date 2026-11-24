@@ -1,14 +1,6 @@
 
-const DB_KEY = 'credigestor_single_owner_v25';
+const DB_KEY = 'credigestor_v1';
 const THEMES = {
-  oceano:{name:'Oceano',accent:'#0369a1',accent2:'#0891b2',wallpaper:'linear-gradient(145deg,#f0f9ff,#cffafe)'},
-  ametista:{name:'Ametista',accent:'#7c3aed',accent2:'#a21caf',wallpaper:'linear-gradient(145deg,#faf5ff,#ede9fe)'},
-  rose:{name:'Rosé',accent:'#be185d',accent2:'#e11d48',wallpaper:'linear-gradient(145deg,#fff1f2,#fce7f3)'},
-  areia:{name:'Areia',accent:'#92400e',accent2:'#b45309',wallpaper:'linear-gradient(145deg,#fffbeb,#f5ebdd)'},
-  esmeralda:{name:'Esmeralda',accent:'#065f46',accent2:'#059669',wallpaper:'linear-gradient(145deg,#ecfdf5,#d1fae5)'},
-  noite:{name:'Noite',accent:'#60a5fa',accent2:'#a78bfa',dark:true,wallpaper:'radial-gradient(circle at top,#1e293b,#0b1120)'},
-  carbono:{name:'Carbono',accent:'#c4b5fd',accent2:'#818cf8',dark:true,wallpaper:'linear-gradient(145deg,#24212e,#121018)'},
-  marinho:{name:'Marinho',accent:'#22d3ee',accent2:'#38bdf8',dark:true,wallpaper:'linear-gradient(145deg,#0c3044,#071a29)'},
   aurora: {
     name:'Aurora',
     accent:'#2563eb', accent2:'#4f46e5',
@@ -52,39 +44,14 @@ function defaultState(){
   };
 }
 function loadState(){
-  if(window.CREDIGESTOR_MULTITENANT)return defaultState();
   try{
     const raw=localStorage.getItem(DB_KEY);
     return raw ? {...defaultState(),...JSON.parse(raw)} : defaultState();
   }catch(e){ return defaultState(); }
 }
 function saveState(){
-  if(window.CREDIGESTOR_MULTITENANT){
-    try{
-      if(!window.CrediGestorCloud)throw Error('Aguarde a conexão com sua conta.');
-      window.CrediGestorCloud.save(state);applySettings();return true;
-    }catch(error){window.CrediGestorCloud?.rollback();alert(error.message);throw error;}
-  }
-  try{localStorage.setItem(DB_KEY, JSON.stringify(state));}catch(error){alert('Não foi possível salvar neste aparelho. Exporte um backup antes de fechar.');throw error;}
-  if(window.CREDIGESTOR_SINGLE_USER && firebase && firebase.firestore && window.CrediGestorCore && typeof window.CrediGestorCore.commit === 'function'){
-    (async ()=>{
-      try{
-        const db = firebase.firestore();
-        const ref = db.collection('organizations').doc('org_r7XvaVZzBhglpaMAuMlBXuipBBt1').collection('appData').doc('main');
-        const snap = await ref.get({source:'server'});
-        const expected = snap.exists ? (snap.data().revision || 0) : 0;
-        const nextRev = await window.CrediGestorCore.commit(
-          db, ref, expected, state, {}, 'r7XvaVZzBhglpaMAuMlBXuipBBt1',
-          'personal-sync', ()=>new Date().toISOString()
-        );
-        if(window.CrediGestorPersonalSync && typeof window.CrediGestorPersonalSync.notifyLocalSave === 'function'){
-          window.CrediGestorPersonalSync.notifyLocalSave(nextRev);
-        }
-      }catch(e){ console.warn('[CrediGestorSync] falha ao sincronizar para nuvem', e); }
-    })();
-  }
+  localStorage.setItem(DB_KEY, JSON.stringify(state));
   applySettings();
-  return true;
 }
 function uid(prefix='id'){ return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); }
 function brl(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -99,24 +66,26 @@ function dueDateFor(year, monthIndex, baseDay){
 function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function compactDate(d){ return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function isPaidContract(c){
-  return !!c&&([c.status,c.loanStatus].some(status=>['paid','quitado','settled','paid_off'].includes(String(status||'').toLowerCase()))||!!c.paidOffAt);
-}
 function contractBalance(c){
-  if(isPaidContract(c))return 0;
   return Math.max(0,(Number(c.initialPrincipal)||0)+(c.movements||[]).reduce((t,m)=>t+(m.type==='increase'?Number(m.amount):-Number(m.amount)),0));
 }
 function monthlyDue(c){
-  if(isPaidContract(c))return 0;
   const bal=contractBalance(c);
   if(c.billingType==='fixed') return Number(c.fixedAmount)||0;
   return bal*(Number(c.interestRate)||0)/100;
 }
-function clientBalance(cl){ return (cl.contracts||[]).filter(c=>c.active!==false&&!isPaidContract(c)).reduce((t,c)=>t+contractBalance(c),0); }
-function clientMonthlyDue(cl){ return (cl.contracts||[]).filter(c=>c.active!==false&&!isPaidContract(c)).reduce((t,c)=>t+monthlyDue(c),0); }
+function clientBalance(cl){ return (cl.contracts||[]).filter(c=>c.active!==false).reduce((t,c)=>t+contractBalance(c),0); }
+function clientMonthlyDue(cl){ return (cl.contracts||[]).filter(c=>c.active!==false).reduce((t,c)=>t+monthlyDue(c),0); }
 function getPayment(c,ref){ return (c.payments||[]).find(p=>p.reference===ref); }
+function paymentTotalForMonth(c,ref){
+  return (c.payments||[]).reduce((cents,p)=>{
+    const pr=String(p.reference||p.ref||''),date=String(p.paidAt||p.date||'');
+    const same=pr===ref||pr===String(ref).slice(5)||(!pr&&date.slice(0,7)===ref);
+    return cents+(same?Math.max(0,Math.round((Number(p.amount)||0)*100)):0);
+  },0)/100;
+}
 function activeContracts(){
-  return state.clients.flatMap(cl=>(cl.contracts||[]).filter(c=>c.active!==false&&!isPaidContract(c)).map(c=>({cl,c})));
+  return state.clients.flatMap(cl=>(cl.contracts||[]).filter(c=>c.active!==false).map(c=>({cl,c})));
 }
 function contractStartDate(c){
   const m=String(c?.startDate||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -126,7 +95,8 @@ function contractStartDate(c){
 }
 function firstPaymentDate(c){
   const start=contractStartDate(c);
-  return start?addDays(start,30):null;
+  // Primeira cobrança: dia-base do mês seguinte ao início (último dia do mês se não existir).
+  return start?dueDateFor(start.getFullYear(),start.getMonth()+1,c.baseDueDay):null;
 }
 function chargeFor(cl,c,year,monthIndex){
   const ref=`${year}-${String(monthIndex+1).padStart(2,'0')}`;
@@ -142,8 +112,9 @@ function chargeFor(cl,c,year,monthIndex){
   const amount=beforeFirst&&!payment?0:monthlyDue(c);
   const now=new Date(); now.setHours(0,0,0,0);
   const d0=new Date(due); d0.setHours(0,0,0,0);
-  let status=payment?'paid':(beforeFirst?'not_due':(d0<now?'late':'open'));
-  return {cl,c,ref,due,payment,amount,status,firstDue};
+  const paid=paymentTotalForMonth(c,ref),remaining=Math.max(0,Math.round((amount-paid)*100))/100;
+  let status=beforeFirst?'not_due':(remaining===0?'paid':(d0<now?'late':'open'));
+  return {cl,c,ref,due,payment,amount,paid,remaining,status,firstDue};
 }
 function allChargesAround(){
   const now=new Date(), arr=[];
@@ -158,25 +129,13 @@ function delinquencyRate(){
   if(!arr.length) return 0;
   return 100*arr.filter(x=>x.status==='late').length/arr.length;
 }
-const appearanceCache=new Map();
-function appearanceKey(){if(window.CREDIGESTOR_SINGLE_USER)return "credigestor_appearance:r7XvaVZzBhglpaMAuMlBXuipBBt1:org_r7XvaVZzBhglpaMAuMlBXuipBBt1";const s=window.CrediGestorCloud?.session();return s?.user?`credigestor_appearance:${s.user.uid}:${s.organizationId}`:window.CREDIGESTOR_MULTITENANT?null:'credigestor_appearance:local';}
-function appearanceTheme(){const key=appearanceKey();if(!key)return '';if(!appearanceCache.has(key)){try{appearanceCache.set(key,localStorage.getItem(key)||'');}catch(_){appearanceCache.set(key,'');}}return appearanceCache.get(key);}
-function chooseTheme(theme){
-  if(!THEMES[theme])return;
-  const key=appearanceKey();if(!key)return;
-  appearanceCache.set(key,theme);try{localStorage.setItem(key,theme);}catch(_){}
-  applySettings();
-  const select=document.getElementById('themeSelect');if(select)select.value=theme;
-}
 function applySettings(){
   const root=document.documentElement;
-  const personalTheme=appearanceTheme();
-  const th=THEMES[personalTheme||state.settings.theme]||THEMES.aurora;
-  root.dataset.colorMode=th.dark?'dark':'light';
+  const th=THEMES[state.settings.theme]||THEMES.aurora;
   root.style.setProperty('--accent',th.accent);
   root.style.setProperty('--accent-2',th.accent2);
   root.style.setProperty('--font',state.settings.font||'"Segoe UI", Arial, sans-serif');
-  root.style.setProperty('--wallpaper', !personalTheme&&state.settings.customWallpaper ? `url("${state.settings.customWallpaper}") center/cover fixed` : th.wallpaper);
+  root.style.setProperty('--wallpaper', state.settings.customWallpaper ? `url("${state.settings.customWallpaper}") center/cover fixed` : th.wallpaper);
   document.getElementById('appTitle').textContent=state.settings.appName||'CrediGestor';
   document.title=(state.settings.appName||'CrediGestor')+' Mobile';
 }
@@ -188,8 +147,8 @@ document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',
   render();
 }));
 document.getElementById('themeQuickBtn').addEventListener('click',()=>{
-  const keys=Object.keys(THEMES); const idx=keys.indexOf(appearanceTheme()||state.settings.theme);
-  chooseTheme(keys[(idx+1)%keys.length]);
+  const keys=Object.keys(THEMES); const idx=keys.indexOf(state.settings.theme);
+  state.settings.theme=keys[(idx+1)%keys.length]; saveState(); render();
 });
 const modal=document.getElementById('modal');
 function openModal(html, bind){
@@ -212,9 +171,9 @@ function renderDashboard(){
     const n=new Date(); return chargeFor(cl,c,n.getFullYear(),n.getMonth());
   });
   const portfolio=state.clients.reduce((t,c)=>t+clientBalance(c),0);
-  const toReceive=monthCharges.filter(x=>x.status!=='paid').reduce((t,x)=>t+x.amount,0);
-  const received=monthCharges.filter(x=>x.status==='paid').reduce((t,x)=>t+Number(x.payment.amount||x.amount),0);
-  const late=monthCharges.filter(x=>x.status==='late').reduce((t,x)=>t+x.amount,0);
+  const toReceive=monthCharges.filter(x=>x.status!=='not_due').reduce((t,x)=>t+x.remaining,0);
+  const received=monthCharges.reduce((t,x)=>t+x.paid,0);
+  const late=monthCharges.filter(x=>x.status==='late').reduce((t,x)=>t+x.remaining,0);
   const dueSoon=allChargesAround().filter(x=>x.status!=='paid' && x.due>=new Date(Date.now()-86400000)).slice(0,5);
   const goal=Number(state.goals.monthlyReceipt)||0;
   const goalPct=goal?Math.min(100,(received/goal)*100):0;
@@ -261,8 +220,8 @@ function chargeItemHtml(x){
       </div>
       <span class="status ${x.status}">${x.status==='paid'?'PAGO':x.status==='late'?'ATRASADO':'ABERTO'}</span>
     </div>
-    <div class="row space" style="margin-top:11px">
-      <strong class="money">${brl(x.amount)}</strong>
+    <div class="row space charge-value-row" style="margin-top:11px;display:flex;flex-direction:column;align-items:stretch">
+      <strong class="money" style="white-space:nowrap;overflow-wrap:normal;word-break:normal;flex-shrink:0">${brl(x.amount)}</strong>
       <div class="inline-actions" style="margin:0">
         ${x.status!=='paid'?`<button class="small-btn pay-btn" data-c="${x.cl.id}" data-k="${x.c.id}" data-r="${x.ref}">Marcar pago</button>`:''}
         ${state.settings.googleCalendar?`<button class="small-btn cal-btn" data-c="${x.cl.id}" data-k="${x.c.id}" data-r="${x.ref}">Agenda</button>`:''}
@@ -350,20 +309,17 @@ function renderCRM(){
   `;
 }
 function renderSettings(){
-  const currentTheme=appearanceTheme()||state.settings.theme;
-  const th=THEMES[currentTheme]||THEMES.aurora;
+  const th=THEMES[state.settings.theme]||THEMES.aurora;
   document.getElementById('view').innerHTML=`
-    ${window.CREDIGESTOR_MULTITENANT?'<div class="section-title"><h2>Conta e organização</h2></div><div class="card"><button id="v26SettingsAccount" class="soft-btn" type="button">Minha conta, equipe e importar backup</button><p class="note">Gerencie seu acesso, a sincronização e o backup JSON.</p></div>':''}
     <div class="section-title"><h2>Personalização</h2><small>visual do aplicativo</small></div>
     <div class="card">
       <div class="field"><label>Nome do aplicativo</label><input id="appNameInput" value="${esc(state.settings.appName)}"></div>
       <div class="field"><label>Tema</label>
-        <select id="themeSelect">${Object.entries(THEMES).map(([k,v])=>`<option value="${k}" ${k===currentTheme?'selected':''}>${v.name}</option>`).join('')}</select>
-        <small class="muted">Tema salvo neste aparelho para sua conta.</small>
+        <select id="themeSelect">${Object.entries(THEMES).map(([k,v])=>`<option value="${k}" ${k===state.settings.theme?'selected':''}>${v.name}</option>`).join('')}</select>
       </div>
       <div class="field"><label>Fonte</label>
         <select id="fontSelect">
-          ${['"Segoe UI", Arial, sans-serif','Arial, sans-serif','Georgia, serif','Tahoma, sans-serif','Verdana, sans-serif','"Trebuchet MS", sans-serif','system-ui, sans-serif','Roboto, Arial, sans-serif','"Helvetica Neue", Arial, sans-serif','Cambria, Georgia, serif','Palatino, Georgia, serif','"Times New Roman", serif','"Courier New", monospace','Consolas, monospace'].map(f=>`<option value="${esc(f)}" ${f===state.settings.font?'selected':''}>${f.split(',')[0].replaceAll('"','')}</option>`).join('')}
+          ${['"Segoe UI", Arial, sans-serif','Arial, sans-serif','Georgia, serif','Tahoma, sans-serif','Verdana, sans-serif','"Trebuchet MS", sans-serif'].map(f=>`<option value="${esc(f)}" ${f===state.settings.font?'selected':''}>${f.split(',')[0].replaceAll('"','')}</option>`).join('')}
         </select>
       </div>
       <div class="wallpaper-preview"></div>
@@ -374,7 +330,7 @@ function renderSettings(){
     <div class="card">
       <div class="switch-row"><div><div class="title">Google Agenda</div><div class="muted">Exibe botão para adicionar vencimentos</div></div><button class="switch ${state.settings.googleCalendar?'on':''}" id="calendarSwitch" aria-label="Google Agenda"></button></div>
       <div class="switch-row"><div><div class="title">Notificações</div><div class="muted">Lembretes ao abrir o app</div></div><button class="switch ${state.settings.notifications?'on':''}" id="notificationSwitch" aria-label="Notificações"></button></div>
-      <div class="rule-note">Regra de vencimento: o primeiro pagamento vence 30 dias após a data de início do empréstimo. Depois disso, o contrato segue o dia-base; se o mês não possuir esse dia, usa o último dia do mês.</div>
+      <div class="rule-note">Regra de vencimento: o primeiro pagamento vence no dia-base do mês seguinte ao início do empréstimo e as demais cobranças seguem o mesmo dia-base; se o mês não possuir esse dia, usa o último dia do mês.</div>
     </div>
     <div class="section-title"><h2>Dados e backup</h2></div>
     <div class="card">
@@ -383,7 +339,7 @@ function renderSettings(){
     </div>
   `;
   document.getElementById('appNameInput').onchange=e=>{state.settings.appName=e.target.value.trim()||'CrediGestor';saveState()};
-  document.getElementById('themeSelect').onchange=e=>chooseTheme(e.target.value);
+  document.getElementById('themeSelect').onchange=e=>{state.settings.theme=e.target.value;state.settings.customWallpaper='';saveState();renderSettings()};
   document.getElementById('fontSelect').onchange=e=>{state.settings.font=e.target.value;saveState()};
   document.getElementById('calendarSwitch').onclick=()=>{state.settings.googleCalendar=!state.settings.googleCalendar;saveState();renderSettings()};
   document.getElementById('notificationSwitch').onclick=toggleNotifications;
@@ -393,7 +349,7 @@ function renderSettings(){
   w.onchange=()=>{
     const f=w.files[0]; if(!f)return;
     if(f.size>2_000_000){alert('Use uma imagem de até 2 MB nesta versão.');return}
-    const r=new FileReader(); r.onload=()=>{const key=appearanceKey();if(key){appearanceCache.set(key,'');try{localStorage.removeItem(key);}catch(_){}}state.settings.customWallpaper=r.result;saveState();renderSettings()}; r.readAsDataURL(f);
+    const r=new FileReader(); r.onload=()=>{state.settings.customWallpaper=r.result;saveState();renderSettings()}; r.readAsDataURL(f);
   };
   const clear=document.getElementById('clearWallpaperBtn');
   if(clear) clear.onclick=()=>{state.settings.customWallpaper='';saveState();renderSettings()};
@@ -484,7 +440,6 @@ function openContractModal(clientId, contractId){
       <div class="field"><label>Juros (% ao mês)</label><input id="kRate" type="number" step="0.01" value="${k?.interestRate||''}"></div>
       <div class="field"><label>Parcela fixa</label><input id="kFixed" type="number" step="0.01" value="${k?.fixedAmount||''}"></div>
     </div>
-    ${k?`<div class="field"><label>Valor dos juros atuais</label><input type="text" readonly disabled value="${brl(contractBalance(k)*(Number(k.interestRate)||0)/100)}" style="background:#f1f5f9;color:#0f172a;font-weight:700"></div>`:''}
     <div class="two">
       <div class="field"><label>Início</label><input id="kStart" type="date" value="${k?.startDate||todayISO()}"></div>
       <div class="field"><label>Status</label><select id="kActive"><option value="1" ${k?.active!==false?'selected':''}>Ativo</option><option value="0" ${k?.active===false?'selected':''}>Encerrado</option></select></div>
