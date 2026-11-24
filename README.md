@@ -1,4 +1,15 @@
-# CredGestor - Versão 2026.10.25
+# CredGestor
+
+## Onde está cada versão (leia primeiro)
+
+- **`firebase-hosting/`** — app oficial, publicado em https://credigestor-testes.web.app/ e aberto pelo APK. Alterações devem ser feitas aqui.
+- **Raiz do repositório** — versão antiga (GitHub Pages), mantida apenas para quem ainda tem dados salvos nela. Mostra um aviso apontando para o app oficial.
+- **Cópia na nuvem** (`firebase-hosting/cloud-backup.js`) — a conta principal envia a carteira para o Firestore a cada alteração e carrega a versão mais recente ao abrir em outro aparelho. Se dois aparelhos alterarem ao mesmo tempo, o app pergunta qual versão manter; a outra fica guardada como cópia de segurança no aparelho.
+- Testes: `node tests/<nome>.cjs` (Playwright). O GitHub Actions roda todos a cada envio.
+
+---
+
+## Histórico — Versão 2026.10.25
 
 Sistema completo de Gestão de Crédito com histórico de pagamentos e geração de APK Android.
 
