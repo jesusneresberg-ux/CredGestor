@@ -1,3 +1,10 @@
+ENDEREÇO ÚNICO DO CREDIGESTOR: https://credigestor-testes.web.app/
+
+O código do app fica em firebase-hosting/ e é publicado automaticamente no Firebase
+a cada push na main (.github/workflows/deploy-firebase.yml). O APK abre esse mesmo endereço.
+Os arquivos do app na raiz do repositório são uma cópia antiga e não são mais publicados:
+o index.html da raiz (GitHub Pages) apenas redireciona para o endereço único.
+
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                  CREDIGESTOR - ATUALIZAÇÃO 2026.10.25                        ║
 ║                    TODOS OS ARQUIVOS EM UMA PASTA                            ║
