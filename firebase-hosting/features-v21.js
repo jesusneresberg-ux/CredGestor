@@ -125,10 +125,21 @@
     }
   };
   window.PaymentDiscount=PaymentDiscount;
+  // Mês atrasado mais antigo (vencido e com saldo) do contrato, ou null.
+  function oldestLateV21(cl,k){
+    if(k.active===false||isPaidContract(k)||k.billingType==='amortization')return null;
+    const first=typeof firstPaymentDate==='function'?firstPaymentDate(k):null;if(!first)return null;
+    const today=new Date(),end=today.getFullYear()*12+today.getMonth();
+    for(let i=first.getFullYear()*12+first.getMonth();i<=end;i++){const row=chargeFor(cl,k,Math.floor(i/12),i%12);if(row.status==='late'&&row.remaining>0)return row;}
+    return null;
+  }
+  window.oldestLateCharge=oldestLateV21;
   function registerParcelV21(cl,k,ref,amount,paidAt,method,note,referenceDate,partial=false,attachment=null,paymentDetails={}){
     const paymentMeta=PaymentMethods.details(method,paymentDetails.paymentDetails);
     if(k.active===false){alert('Este empréstimo está encerrado.');return null}
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(ref)){alert('Informe um mês de referência válido.');return null}
+    // Com parcela atrasada, a baixa vai para o mês atrasado mais antigo.
+    const oldestLate=oldestLateV21(cl,k);if(oldestLate&&oldestLate.ref<ref){ref=oldestLate.ref;referenceDate='';}
     const [y,m]=ref.split('-').map(Number),charge=chargeFor(cl,k,y,m-1,paidAt);
     const cents=Math.round(Number(amount)*100),remainingCents=Math.round(charge.remaining*100);
     if(charge.status==='not_due'||charge.amount<=0){alert('Escolha um mês a partir do primeiro vencimento do empréstimo.');return null}
@@ -212,9 +223,9 @@
   window.pendingCollectionCharges=pendingChargesV21;
   function openPaymentsHubV21(clientId,contractId,ref){
     const cl=(state.clients||[]).find(x=>x.id===clientId),k=(cl?.contracts||[]).find(x=>x.id===contractId);if(!cl||!k)return;
-    const pending=pendingChargesV21(cl,k),useRef=String(ref||pending[0]?.ref||monthRef()),[y,m]=useRef.split('-').map(Number),charge=chargeFor(cl,k,y,m-1),existing=getPayment(k,useRef),q=payoffQuoteV21(k);
+    const pending=pendingChargesV21(cl,k),late=pending.find(x=>x.status==='late'),useRef=late&&(!ref||String(ref)>late.ref)?late.ref:String(ref||pending[0]?.ref||monthRef()),[y,m]=useRef.split('-').map(Number),charge=chargeFor(cl,k,y,m-1),existing=getPayment(k,useRef),q=payoffQuoteV21(k);
     openModal(`<h2>Pagamentos</h2><div class="card"><div class="muted">${esc(cl.name)} • ${esc(loanCodeV21(k))}</div><div class="v21-summary"><div><small>Capital atual</small><strong>${brl(q.principal)}</strong></div><div><small>Juros atuais</small><strong>${brl(q.interest)}</strong></div><div class="v21-total"><small>Quitação capital + juros</small><strong>${brl(q.total)}</strong></div></div></div><div class="v21-choice-grid"><button type="button" class="v21-choice" id="v21Parcel"><span class="ico">💵</span><span><b>Pagar Parcela</b><small>Registrar a cobrança do mês e gerar comprovante.</small></span></button><button type="button" class="v21-choice" id="v21Amortize"><span class="ico">📉</span><span><b>Apenas amortização</b><small>Reduzir o principal e recalcular os juros futuros.</small></span></button><button type="button" class="v21-choice" id="v21Payoff"><span class="ico">✅</span><span><b>Quitar Capital + Juros</b><small>Receber tudo, zerar o saldo e encerrar o contrato.</small></span></button></div><div class="rule-note">Escolha uma opção. Nenhuma baixa é feita antes da confirmação final.</div>`,()=>{
-      const select=document.createElement('div');select.className='field';select.innerHTML=`<label>Cobrança a pagar (mesma referência da aba Cobranças)</label><select id="v21ChargeRef">${(pending.some(x=>x.ref===useRef)?pending:[charge,...pending]).map(x=>`<option value="${esc(x.ref)}" ${x.ref===useRef?'selected':''}>${esc(x.ref)} · vencimento ${x.due.toLocaleDateString('pt-BR')} · restante ${brl(x.remaining)}</option>`).join('')}</select><small>O pagamento baixa somente esta referência. Outros meses em aberto continuam em Cobranças.</small>`;
+      const select=document.createElement('div');select.className='field';select.innerHTML=`<label>Cobrança a pagar (mesma referência da aba Cobranças)</label><select id="v21ChargeRef">${(late?pending.filter(x=>x.ref<=late.ref):pending.some(x=>x.ref===useRef)?pending:[charge,...pending]).map(x=>`<option value="${esc(x.ref)}" ${x.ref===useRef?'selected':''}>${esc(x.ref)} · vencimento ${x.due.toLocaleDateString('pt-BR')} · restante ${brl(x.remaining)}</option>`).join('')}</select><small>${late?`Há parcela atrasada: o pagamento baixa primeiro ${esc(late.ref)}, mesmo pago depois do vencimento.`:'O pagamento baixa somente esta referência. Outros meses em aberto continuam em Cobranças.'}</small>`;
       document.querySelector('.v21-choice-grid').before(select);
       document.getElementById('v21ChargeRef').onchange=e=>openPaymentsHubV21(clientId,contractId,e.target.value);
       document.getElementById('v21Parcel').onclick=()=>openParcelV21(clientId,contractId,useRef,existing,charge);
