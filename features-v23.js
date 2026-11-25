@@ -1,4 +1,4 @@
-// CrediGestor v23 — regra de 30 dias para o primeiro pagamento, comprovantes com emojis e sem data de término.
+// CrediGestor v23 — primeiro vencimento padronizado no dia-base do mês seguinte, comprovantes com emojis e sem data de término.
 (function(){
   'use strict';
   const VERSION='23.0';
@@ -17,7 +17,7 @@
     const baseRowsV23=csvRows3;
     csvRows3=function(){return baseRowsV23().map(r=>{if(r&&typeof r==='object')delete r.data_termino;return r})};
   }
-  // Todos os comprovantes ativos usam marcadores visuais/emoji; mantém compatibilidade com módulos antigos.
-  window.__credigestorV23={version:VERSION,firstPaymentDays:30,noContractEndDate:true,emojiReceipts:true};
+  // Regra padronizada: primeiro vencimento sempre no dia-base do mês seguinte ao início (não mais 30 dias fixos).
+  window.__credigestorV23={version:VERSION,firstPaymentDays:'baseDueDay_nextMonth',noContractEndDate:true,emojiReceipts:true};
   try{saveState()}catch(_){ }
 })();

@@ -1,37 +1,69 @@
-name: Gerar APK CrediGestor
+name: Build APK
+
 on:
   push:
-    branches: [main]
-    paths: ['MainActivity.java', 'CrediAppIconPlugin.java', 'native-icon-colors.json', 'scripts/prepare-android.cjs', '.github/workflows/build-apk.yml']
-  workflow_dispatch:
+    branches: [ main, master ]
   pull_request:
-    paths: ['MainActivity.java', 'CrediBiometricPlugin.java', 'CrediAppIconPlugin.java', 'native-icon-colors.json', 'scripts/prepare-android.cjs', '.github/workflows/build-apk.yml']
-permissions:
-  contents: read
-jobs:
-  apk:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools platforms;android-33 build-tools;33.0.2
-          log-accepted-android-sdk-licenses: false
-      - run: npm install --ignore-scripts --package-lock=false
-      - run: node scripts/prepare-android.cjs
-      - run: npx cap add android
-      - run: node scripts/prepare-android.cjs
-      - run: npx cap sync android
-      - run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CrediGestor-juros-mensais-2026.11.17
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+    branches: [ main, master ]
+  workflow_dispatch:
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Capacitor sync
+      run: npx cap sync android
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
+
+    - name: Build APK (debug)
+      run: |
+        cd android
+        ./gradlew assembleDebug
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+
+    - name: Create Release (on tags)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: android/app/build/outputs/apk/debug/app-debug.apk
+        generate_release_notes: true

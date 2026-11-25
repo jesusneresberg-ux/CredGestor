@@ -126,7 +126,8 @@ function contractStartDate(c){
 }
 function firstPaymentDate(c){
   const start=contractStartDate(c);
-  return start?addDays(start,30):null;
+  if(!start)return null;
+  return dueDateFor(start.getFullYear(),start.getMonth()+1,c.baseDueDay);
 }
 function chargeFor(cl,c,year,monthIndex){
   const ref=`${year}-${String(monthIndex+1).padStart(2,'0')}`;
@@ -374,7 +375,7 @@ function renderSettings(){
     <div class="card">
       <div class="switch-row"><div><div class="title">Google Agenda</div><div class="muted">Exibe botão para adicionar vencimentos</div></div><button class="switch ${state.settings.googleCalendar?'on':''}" id="calendarSwitch" aria-label="Google Agenda"></button></div>
       <div class="switch-row"><div><div class="title">Notificações</div><div class="muted">Lembretes ao abrir o app</div></div><button class="switch ${state.settings.notifications?'on':''}" id="notificationSwitch" aria-label="Notificações"></button></div>
-      <div class="rule-note">Regra de vencimento: o primeiro pagamento vence 30 dias após a data de início do empréstimo. Depois disso, o contrato segue o dia-base; se o mês não possuir esse dia, usa o último dia do mês.</div>
+      <div class="rule-note">Regra de vencimento: o primeiro pagamento vence no mês seguinte à data de início, sempre no dia-base definido para o contrato. Se o mês não possuir esse dia, usa o último dia do mês. Todos os contratos seguem o mesmo padrão.</div>
     </div>
     <div class="section-title"><h2>Dados e backup</h2></div>
     <div class="card">
