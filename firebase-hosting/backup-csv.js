@@ -155,7 +155,9 @@ function importStructuredCSV3(rows){
       if(p){Object.assign(p,obj);updated++;}else{k.payments.push(obj);created++;}
     }
   }
-  saveState();render();return {created,updated};
+  saveState();render();
+  try{if(window.CrediGestorRealtimeSync)window.CrediGestorRealtimeSync.pushNow();}catch(_){}
+  return {created,updated};
 }
 
 function parseLegacyLoan3(note,day){
@@ -199,7 +201,9 @@ function importLegacyCSV3(rows){
     }else if(/^LEMBRETE\s*:/i.test(note)){reminders++;}
     i=j-1;
   }
-  saveState();render();return {blocks,loans,reminders};
+  saveState();render();
+ try{if(window.CrediGestorRealtimeSync)window.CrediGestorRealtimeSync.pushNow();}catch(_){}
+ return {blocks,loans,reminders};
 }
 function importCSVFile3(text){
   const rows=parseCSV3(text);if(!rows.length)throw new Error('CSV vazio');
@@ -211,7 +215,10 @@ function restoreJSON3(text){
   const parsed=JSON.parse(text);const data=parsed?.data&&parsed?.format?parsed.data:parsed;
   if(!data||typeof data!=='object'||!Array.isArray(data.clients))throw new Error('Backup inválido');
   if(!confirm('Restaurar este backup substituirá os dados atuais deste aparelho. Continuar?'))return false;
-  Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,defaultState(),data);ensureStateV3();saveState();render();return true;
+  Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,defaultState(),data);ensureStateV3();saveState();render();
+  // Força envio imediato dos dados restaurados para a nuvem (sincronização em tempo real).
+  try{if(window.CrediGestorRealtimeSync)window.CrediGestorRealtimeSync.pushNow();}catch(_){}
+  return true;
 }
 
 const oldImportInput3=document.getElementById('importInput');
