@@ -27,6 +27,18 @@ jobs:
       # O package.json da raiz não é o do APK; usa o manifesto próprio do Capacitor.
       - run: cp apk/package.json package.json && rm -f package-lock.json
       - run: npm install --ignore-scripts --package-lock=false
+      # Assinatura fixa: com a chave guardada no segredo ANDROID_DEBUG_KEYSTORE_B64, todo APK novo
+      # instala por cima do anterior (só atualiza). Sem o segredo, a build segue com chave temporária.
+      - name: Chave de assinatura fixa
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p ~/.android && echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Assinatura fixa ativa."
+          else
+            echo "::warning::Segredo ANDROID_DEBUG_KEYSTORE_B64 ausente: APK assinado com chave temporária."
+          fi
       - run: node scripts/prepare-android.cjs
       - run: npx cap add android
       - run: node scripts/prepare-android.cjs
