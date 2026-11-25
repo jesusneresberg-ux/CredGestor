@@ -1,9 +1,7 @@
-    // CrediGestor personal wallets v1
+    // CrediGestor personal wallets v2
     match /personalWallets/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid
-        && uid == 'r7XvaVZzBhglpaMAuMlBXuipBBt1';
+      allow read, write: if request.auth != null && request.auth.uid == uid;
       match /clients/{clientId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid
-          && uid == 'r7XvaVZzBhglpaMAuMlBXuipBBt1';
+        allow read, write: if request.auth != null && request.auth.uid == uid;
       }
     }

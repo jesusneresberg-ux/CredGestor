@@ -1,6 +1,7 @@
 // Preserves the deployed Firestore rules and adds the owner's real-time wallet sync paths.
 const {GoogleAuth}=require('google-auth-library');
-const MARKER='// CrediGestor personal wallets v1';
+const MARKER='// CrediGestor personal wallets v2';
+const OLD_MARKER='// CrediGestor personal wallets v1';
 const fs=require('node:fs'),os=require('node:os'),pathModule=require('node:path'),{execFileSync}=require('node:child_process');
 (async()=>{
  const project='credigestor-testes',credentials=JSON.parse(process.env.FIREBASE_DEPLOY_ACCOUNT||'{}');
@@ -13,12 +14,17 @@ const fs=require('node:fs'),os=require('node:os'),pathModule=require('node:path'
  if(files.length!==1)throw Error('Estrutura de regras inesperada; publicação interrompida.');
  let content=files[0].content;
  if(!content.includes(MARKER)){
-   // Existing application rules use only these explicit top-level collections.
-   // A broad wildcard could override the approval ACL, so never publish over one.
-   const paths=[...content.matchAll(/match\s+\/([^\s{]+|\{[^}]+\})/g)].map(m=>m[1]);
-   if(paths.some(p=>p.startsWith('{'))||!content.includes('match /databases/{database}/documents {')||!/\n  }\s*}\s*$/.test(content))throw Error('As regras atuais precisam de revisão antes de acrescentar a sincronização. Caminhos: '+paths.join(', '));
    const block=fs.readFileSync('scripts/personal-wallet.rules.fragment','utf8');
-   content=content.replace(/\n  }\s*}\s*$/,`\n${block}\n  }\n}\n`);
+   if(content.includes(OLD_MARKER)){
+     // Substitui o bloco v1 (só dono) pelo v2 (qualquer conta autenticada).
+     content=content.replace(/\n\s*\/\/ CrediGestor personal wallets v1[\s\S]*?match \/clients\/\{clientId\}\s*\{[^}]*\}\s*\}\s*/,`\n${block}`);
+   }else{
+     // Existing application rules use only these explicit top-level collections.
+     // A broad wildcard could override the approval ACL, so never publish over one.
+     const paths=[...content.matchAll(/match\s+\/([^\s{]+|\{[^}]+\})/g)].map(m=>m[1]);
+     if(paths.some(p=>p.startsWith('{'))||!content.includes('match /databases/{database}/documents {')||!/\n  }\s*}\s*$/.test(content))throw Error('As regras atuais precisam de revisão antes de acrescentar a sincronização. Caminhos: '+paths.join(', '));
+     content=content.replace(/\n  }\s*}\s*$/,`\n${block}\n  }\n}\n`);
+   }
    files[0].content=content;
    const temp=fs.mkdtempSync(pathModule.join(os.tmpdir(),'credigestor-wallet-'));
    const rulesPath=pathModule.join(temp,'firestore.rules'),configPath=pathModule.join(temp,'firebase.json');
@@ -32,7 +38,7 @@ const fs=require('node:fs'),os=require('node:os'),pathModule=require('node:path'
  const readback=(await client.request({url:`${api}/${release}`})).data;
  const verified=(await client.request({url:`${api}/${readback.rulesetName}`})).data;
  if(!verified.source.files.some(f=>f.content.includes(MARKER)))throw Error('Regras não confirmadas.');
- console.log('Sincronização em tempo real liberada só para o dono; regras anteriores preservadas.');
+ console.log('Sincronização em tempo real liberada para qualquer conta autenticada (isolada por UID); regras anteriores preservadas.');
 })().catch(async e=>{
  console.error('Falha ao configurar a sincronização:',e.response?.status||'',e.response?.data?.error?.message||e.message);
  try{
