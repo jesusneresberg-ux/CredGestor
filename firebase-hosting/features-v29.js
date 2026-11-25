@@ -170,6 +170,7 @@
     }catch(error){Object.keys(k).forEach(key=>delete k[key]);Object.assign(k,before);throw error;}
   }
   window.CrediGestorOverdueV29.addManual=addManualLateInterest;
+  window.CrediGestorOverdueV29.hubContext=getContext;
   function openManualLateInterest(){
     const pair=getContext();if(!pair)return;const {cl,k}=pair;
     openModal(`<h2>Inserir juros de atraso</h2><p class="muted">${esc(cl.name)} · ${esc(k.loanCode||k.title||'Contrato')}</p>

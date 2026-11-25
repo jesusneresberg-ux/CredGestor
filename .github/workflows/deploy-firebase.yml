@@ -26,6 +26,8 @@ jobs:
       - run: node tests/readability.cjs
       - run: node tests/assistant-template.cjs
       - run: node tests/capitalization.cjs
+      - run: node tests/capitalization-manual.cjs
+      - run: node tests/capitalization-manual-ui.cjs
       - run: node tests/firebase-partial-payments.cjs
       - run: node tests/payment-discount-unit.cjs
       - run: node tests/payment-fifo.cjs
