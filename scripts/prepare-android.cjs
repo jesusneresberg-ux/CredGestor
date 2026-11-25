@@ -12,7 +12,7 @@ if(fs.existsSync('android')){
  if(!text.includes('androidx.biometric:biometric:'))text=text.replace('dependencies {',"dependencies {\n    implementation 'androidx.biometric:biometric:1.1.0'");
  // Keep version codes increasing for APK updates from this workflow.
  if(process.env.GITHUB_RUN_NUMBER)text=text.replace(/versionCode\s+\d+/,`versionCode ${1000+Number(process.env.GITHUB_RUN_NUMBER)}`);
- text=text.replace(/versionName\s+"[^"]+"/,'versionName "2026.11.17"');
+ text=text.replace(/versionName\s+"[^"]+"/,`versionName "${new Date().toISOString().slice(0,10).replace(/-/g,'.')}"`);
  fs.writeFileSync(gradle,text);
  const res='android/app/src/main/res';
  for(const dir of ['drawable','mipmap-anydpi-v26','values'])fs.mkdirSync(path.join(res,dir),{recursive:true});
