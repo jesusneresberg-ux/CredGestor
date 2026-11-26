@@ -60,10 +60,9 @@
   function archive(value,key){return new Promise((resolve,reject)=>{const r=indexedDB.open('credigestor-individual-recovery',1);r.onupgradeneeded=()=>r.result.createObjectStore('snapshots');r.onerror=()=>reject(Error('Não foi possível criar a cópia de recuperação no aparelho.'));r.onsuccess=()=>{const db=r.result,tx=db.transaction('snapshots','readwrite');tx.objectStore('snapshots').put(value,key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(Error('Não foi possível preservar a cópia de recuperação.'));};};});}
   async function seed(user,token){
     const key=walletKey(user.uid);
-    // Para usuários não-OWNER: não pré-popula com estado vazio.
-    // O realtime-sync.js decide se puxa da nuvem ou cria carteira nova.
-    // Se já existe algo no localStorage, respeita (pode ser backup restaurado).
-    if(user.uid!==OWNER){return;}
+    // Para usuários não-OWNER: cria carteira vazia apenas se não existir nada no localStorage.
+    // Se já existe algo (backup restaurado ou sync anterior), respeita e deixa o realtime-sync decidir.
+    if(user.uid!==OWNER){if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({clients:[],settings:{appName:'CrediGestor',theme:'aurora',notifyDays:[7,3,1,0]},goals:{monthlyReceipt:0,maxDelinquency:10}}));return;}
     const existing=localStorage.getItem(KEY);if(existing){CrediGestorCore.validate(JSON.parse(existing));return;}
     const guard=()=>{if(token!==epoch||auth.currentUser?.uid!==OWNER)throw Error('A conta mudou. Abra novamente com sua conta.');};
     const db=firebase.firestore(),root=db.collection('organizations').doc(ORG),ref=root.collection('appData').doc('main');
