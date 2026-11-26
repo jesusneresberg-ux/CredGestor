@@ -396,8 +396,10 @@
   /* ── Modal: mais largo e organizado ── */
   .modal-card {
     width: min(720px, 90vw) !important;
-    max-height: 85vh !important;
+    max-height: 90vh !important;
     padding: 36px 40px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
   }
 
   .modal-card h2 {
@@ -406,7 +408,7 @@
   }
 
   .modal-card .field {
-    margin-bottom: 16px !important;
+    margin-bottom: 14px !important;
   }
 
   .modal-card .field label {
@@ -414,6 +416,11 @@
     font-weight: 600 !important;
     margin-bottom: 6px !important;
     display: block !important;
+  }
+
+  .modal-card .field textarea {
+    min-height: 80px !important;
+    resize: vertical !important;
   }
 
   .modal-card .two {
@@ -425,9 +432,10 @@
   .modal-card .actions {
     display: flex !important;
     gap: 10px !important;
-    margin-top: 24px !important;
-    padding-top: 20px !important;
+    margin-top: 20px !important;
+    padding-top: 16px !important;
     border-top: 1px solid var(--line) !important;
+    flex-wrap: wrap !important;
   }
 
   /* ── Empty state: centralizado e elegante ── */

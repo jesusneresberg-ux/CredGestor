@@ -270,13 +270,31 @@
   .modal-card {
     position: relative !important;
     inset: auto !important;
-    width: min(680px, 90vw) !important;
-    max-height: 85vh !important;
+    width: min(720px, 90vw) !important;
+    max-height: 90vh !important;
     min-height: auto !important;
     border-radius: 20px !important;
-    padding: 32px !important;
+    padding: 32px 36px !important;
     box-shadow: 0 24px 80px rgba(15, 23, 42, 0.20) !important;
     overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  /* Garante que formulários longos (cadastro de cliente, contrato etc.) não sejam cortados */
+  .modal-card .field {
+    margin-bottom: 14px !important;
+  }
+
+  .modal-card .field textarea {
+    min-height: 80px !important;
+    resize: vertical !important;
+  }
+
+  .modal-card .actions {
+    margin-top: 20px !important;
+    padding-top: 16px !important;
+    border-top: 1px solid var(--line) !important;
+    flex-wrap: wrap !important;
   }
 
   .modal-close {
