@@ -1,0 +1,489 @@
+/* CrediGestor — Dashboard Web Redesenhada
+   Layout exclusivo para telas >= 900px.
+   Transforma a experiência mobile em painel administrativo web completo. */
+
+@media (min-width: 900px) {
+
+  /* ── Dashboard: grid de métricas horizontais ── */
+  .desktop-dashboard-hero {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 20px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .desktop-dashboard-hero .hero {
+    grid-column: 1 / -1 !important;
+    border-radius: 18px !important;
+    padding: 32px 40px !important;
+  }
+
+  .desktop-dashboard-hero .hero .big {
+    font-size: 42px !important;
+  }
+
+  .desktop-dashboard-hero .hero-row {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    margin-top: 24px !important;
+  }
+
+  .desktop-dashboard-hero .hero-mini {
+    padding: 18px 22px !important;
+    border-radius: 14px !important;
+    text-align: center !important;
+  }
+
+  .desktop-dashboard-hero .hero-mini b {
+    font-size: 24px !important;
+  }
+
+  .desktop-dashboard-hero .hero-mini span {
+    font-size: 12px !important;
+    display: block !important;
+    margin-top: 4px !important;
+  }
+
+  /* ── Métricas em cards horizontais ── */
+  .desktop-metrics-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .desktop-metrics-grid .card.metric {
+    padding: 22px 24px !important;
+    border-radius: 14px !important;
+    text-align: left !important;
+  }
+
+  .desktop-metrics-grid .card.metric .kicker {
+    font-size: 11px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 8px !important;
+  }
+
+  .desktop-metrics-grid .card.metric strong {
+    font-size: 28px !important;
+    margin: 0 !important;
+  }
+
+  .desktop-metrics-grid .card.metric small {
+    display: block !important;
+    margin-top: 6px !important;
+    font-size: 12px !important;
+  }
+
+  /* ── Meta mensal: barra horizontal larga ── */
+  .desktop-goal-card {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    align-items: center !important;
+    gap: 24px !important;
+    padding: 24px 28px !important;
+    border-radius: 14px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .desktop-goal-card .progress {
+    height: 12px !important;
+    border-radius: 6px !important;
+    margin-top: 10px !important;
+  }
+
+  .desktop-goal-card .progress i {
+    border-radius: 6px !important;
+  }
+
+  /* ── Tabela de clientes (substitui lista vertical) ── */
+  .desktop-clients-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: var(--surface-solid) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .desktop-clients-table thead th {
+    padding: 14px 18px !important;
+    text-align: left !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--muted) !important;
+    background: color-mix(in srgb, var(--surface-solid) 95%, var(--accent) 5%) !important;
+    border-bottom: 1px solid var(--line) !important;
+    white-space: nowrap !important;
+  }
+
+  .desktop-clients-table tbody tr {
+    cursor: pointer !important;
+    transition: background-color 0.12s ease !important;
+  }
+
+  .desktop-clients-table tbody tr:hover {
+    background: color-mix(in srgb, var(--surface-solid) 94%, var(--accent) 6%) !important;
+  }
+
+  .desktop-clients-table tbody td {
+    padding: 14px 18px !important;
+    border-bottom: 1px solid var(--line) !important;
+    font-size: 14px !important;
+    vertical-align: middle !important;
+  }
+
+  .desktop-clients-table tbody tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  .desktop-clients-table .avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+  }
+
+  .desktop-clients-table .level {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+  }
+
+  .desktop-clients-table .money {
+    font-weight: 700 !important;
+    font-size: 14px !important;
+  }
+
+  /* ── Cobranças: tabela com status visual ── */
+  .desktop-charges-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: var(--surface-solid) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .desktop-charges-table thead th {
+    padding: 14px 18px !important;
+    text-align: left !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--muted) !important;
+    background: color-mix(in srgb, var(--surface-solid) 95%, var(--accent) 5%) !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .desktop-charges-table tbody tr {
+    transition: background-color 0.12s ease !important;
+  }
+
+  .desktop-charges-table tbody tr:hover {
+    background: color-mix(in srgb, var(--surface-solid) 94%, var(--accent) 6%) !important;
+  }
+
+  .desktop-charges-table tbody td {
+    padding: 14px 18px !important;
+    border-bottom: 1px solid var(--line) !important;
+    font-size: 14px !important;
+    vertical-align: middle !important;
+  }
+
+  .desktop-charges-table tbody tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  .desktop-charges-table .status {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    border-radius: 999px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+
+  .desktop-charges-table .inline-actions {
+    margin: 0 !important;
+    gap: 6px !important;
+  }
+
+  .desktop-charges-table .small-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  /* ── CRM: grid de scores + timeline lado a lado ── */
+  .desktop-crm-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+  }
+
+  .desktop-crm-layout .crm-scores,
+  .desktop-crm-layout .crm-timeline {
+    background: var(--surface-solid) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px !important;
+    padding: 24px !important;
+  }
+
+  .desktop-crm-layout .crm-scores h3,
+  .desktop-crm-layout .crm-timeline h3 {
+    margin: 0 0 16px !important;
+    font-size: 16px !important;
+  }
+
+  .desktop-crm-layout .list-item {
+    padding: 14px 16px !important;
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: none !important;
+  }
+
+  .desktop-crm-layout .progress {
+    height: 8px !important;
+    margin-top: 8px !important;
+  }
+
+  /* ── Configurações: grid de seções ── */
+  .desktop-settings-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+  }
+
+  .desktop-settings-grid > .card {
+    padding: 28px !important;
+    border-radius: 14px !important;
+  }
+
+  .desktop-settings-grid .field label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .desktop-settings-grid .field input,
+  .desktop-settings-grid .field select,
+  .desktop-settings-grid .field textarea {
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+  }
+
+  /* ── Breadcrumb / cabeçalho de seção ── */
+  .desktop-section-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .desktop-section-header h2 {
+    margin: 0 !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+  }
+
+  .desktop-section-header small {
+    font-size: 13px !important;
+    color: var(--muted) !important;
+  }
+
+  .desktop-section-header .actions {
+    display: flex !important;
+    gap: 8px !important;
+  }
+
+  /* ── Tabs: estilo pill horizontal ── */
+  .desktop-tabs {
+    display: flex !important;
+    gap: 6px !important;
+    margin-bottom: 20px !important;
+    padding: 4px !important;
+    background: color-mix(in srgb, var(--surface-solid) 90%, var(--line) 10%) !important;
+    border-radius: 12px !important;
+    width: fit-content !important;
+  }
+
+  .desktop-tabs .tab {
+    padding: 8px 18px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--muted) !important;
+    transition: all 0.15s ease !important;
+  }
+
+  .desktop-tabs .tab.active {
+    background: var(--surface-solid) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+  }
+
+  .desktop-tabs .tab:hover:not(.active) {
+    color: var(--text) !important;
+  }
+
+  /* ── Busca: campo largo com ícone ── */
+  .desktop-search-bar {
+    position: relative !important;
+    margin-bottom: 20px !important;
+  }
+
+  .desktop-search-bar input.search {
+    width: 100% !important;
+    max-width: 480px !important;
+    padding: 12px 18px 12px 44px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    border: 1px solid var(--line) !important;
+    background: var(--surface-solid) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  }
+
+  .desktop-search-bar input.search:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent) !important;
+  }
+
+  .desktop-search-bar::before {
+    content: '🔍' !important;
+    position: absolute !important;
+    left: 14px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 16px !important;
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+  }
+
+  /* ── FAB: botão primário no header ── */
+  .desktop-fab-inline {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 10px 20px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    border: none !important;
+    cursor: pointer !important;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)) !important;
+    color: white !important;
+    transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+  }
+
+  .desktop-fab-inline:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 35%, transparent) !important;
+  }
+
+  /* ── Modal: mais largo e organizado ── */
+  .modal-card {
+    width: min(720px, 90vw) !important;
+    max-height: 85vh !important;
+    padding: 36px 40px !important;
+  }
+
+  .modal-card h2 {
+    font-size: 24px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .modal-card .field {
+    margin-bottom: 16px !important;
+  }
+
+  .modal-card .field label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+  }
+
+  .modal-card .two {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
+
+  .modal-card .actions {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 24px !important;
+    padding-top: 20px !important;
+    border-top: 1px solid var(--line) !important;
+  }
+
+  /* ── Empty state: centralizado e elegante ── */
+  .empty.card {
+    padding: 48px 32px !important;
+    text-align: center !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+  }
+
+  /* ── Sidebar: indicador ativo mais visível ── */
+  #app > nav.bottom-nav .nav-btn.active {
+    background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+    color: var(--accent) !important;
+  }
+
+  #app > nav.bottom-nav .nav-btn.active small {
+    font-weight: 700 !important;
+  }
+
+  /* ── Responsividade intermediária (900-1200px) ── */
+  @media (max-width: 1200px) {
+    .desktop-dashboard-hero .hero-row {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .desktop-metrics-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .desktop-crm-layout {
+      grid-template-columns: 1fr !important;
+    }
+
+    .desktop-settings-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* ── Telas muito largas (>1400px) ── */
+  @media (min-width: 1400px) {
+    .desktop-dashboard-hero .hero {
+      padding: 36px 48px !important;
+    }
+
+    .desktop-dashboard-hero .hero .big {
+      font-size: 48px !important;
+    }
+
+    .desktop-metrics-grid {
+      grid-template-columns: repeat(5, 1fr) !important;
+    }
+
+    .desktop-clients-table tbody td,
+    .desktop-charges-table tbody td {
+      padding: 16px 22px !important;
+    }
+  }
+}
